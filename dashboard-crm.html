@@ -226,6 +226,13 @@
     display:flex; align-items:center; justify-content:center; height:100%; min-height:120px;
     color:var(--ink-faint); font-size:12px; text-align:center; padding:10px; line-height:1.6;
   }
+  .exec-summary{ margin:8px 0 0; padding-left:20px; }
+  .exec-summary li{ margin-bottom:9px; font-size:13px; color:var(--ink-muted); line-height:1.6; }
+  .exec-summary li b{ color:var(--ink); font-weight:600; }
+  .unavailable-note{
+    background:var(--panel-alt); border:1px dashed var(--panel-line); border-radius:10px;
+    padding:16px; font-size:12.5px; color:var(--ink-faint); line-height:1.7; margin-top:8px;
+  }
 </style>
 </head>
 <body>
@@ -265,8 +272,6 @@
     <div class="filternote">ตัวกรองสาขา/เดือนมีผลกับทุกการ์ดในหน้านี้ — สำหรับยอดขายและแต้ม การกรองสาขาจะนับเฉพาะธุรกรรมที่มีการบันทึกสาขาไว้เท่านั้น (ธุรกรรมประเภท "แลกแต้มด้วยเบอร์โทร" ส่วนใหญ่ไม่มีสาขากำกับ จึงถูกนับเฉพาะตอนเลือก "ทั้งหมด")</div>
   </div>
 
-  <div class="kpi-grid" id="kpiGrid"></div>
-
   <div class="tabnav">
     <button class="tabbtn active" data-page="1">01 · Customer Overview</button>
     <button class="tabbtn" data-page="2">02 · Customer Behavior &amp; Value</button>
@@ -275,67 +280,75 @@
 
   <div class="page" data-page="1">
 
-  <!-- SECTION 1: Growth & Engagement -->
+  <div class="kpi-grid" id="kpiGrid1"></div>
+
+  <!-- SECTION 1: Executive Summary -->
   <section>
     <div class="section-head">
       <span class="section-num">01</span>
-      <h2 class="section-title">การเติบโตของสมาชิกและการมีส่วนร่วม</h2>
-      <span class="section-desc">Member Growth &amp; Engagement</span>
+      <h2 class="section-title">ภาพรวมลูกค้า</h2>
+      <span class="section-desc">Customer Overview</span>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <h3>สรุปภาพรวม</h3>
+      <p class="cardnote">Executive Summary — สรุปอัตโนมัติจากข้อมูลในตัวกรองที่เลือก</p>
+      <ul id="execSummary" class="exec-summary"></ul>
     </div>
     <div class="grid grid-2" style="margin-bottom:16px;">
       <div class="card tall">
-        <h3>จำนวนสมาชิกใหม่รายเดือน แยกตามสาขา</h3>
-        <p class="cardnote">New Member Registrations by Month &amp; Branch</p>
+        <h3>การเติบโตของฐานสมาชิก</h3>
+        <p class="cardnote">Customer Growth — จำนวนสมาชิกใหม่รายเดือน แยกตามสาขา</p>
         <canvas id="chartGrowth"></canvas>
       </div>
       <div class="card tall">
-        <h3>ความล่าสุดในการใช้งาน (Recency)</h3>
-        <p class="cardnote">วันที่ใช้แต้ม/สแกนล่าสุด นับจากวันที่ข้อมูล</p>
+        <h3>ลูกค้าใหม่ vs ลูกค้าซื้อซ้ำ</h3>
+        <p class="cardnote">New vs Returning Customers (นับจากธุรกรรมซื้อจริงในตัวกรอง)</p>
+        <canvas id="chartNewVsReturning"></canvas>
+      </div>
+    </div>
+    <div class="grid grid-2" style="margin-bottom:16px;">
+      <div class="card">
+        <h3>ลูกค้าที่ใช้งานอยู่ vs ไม่ได้ใช้งาน</h3>
+        <p class="cardnote">Active vs Inactive Customers</p>
+        <canvas id="chartActiveInactive"></canvas>
+      </div>
+      <div class="card">
+        <h3>ความล่าสุดในการใช้งานแบบละเอียด</h3>
+        <p class="cardnote">Recency Breakdown</p>
         <canvas id="chartRecency"></canvas>
       </div>
-    </div>
-    <div class="grid grid-3">
-      <div class="card">
-        <h3>สัดส่วนสมาชิกตามสาขา</h3>
-        <p class="cardnote">Members by Branch</p>
-        <canvas id="chartBranch"></canvas>
-      </div>
-      <div class="card">
-        <h3>ระดับสมาชิก (Tier)</h3>
-        <p class="cardnote">Membership Tier Distribution</p>
-        <canvas id="chartTier"></canvas>
-      </div>
-      <div class="card">
-        <h3>การสมัครรับข่าวสาร</h3>
-        <p class="cardnote">Newsletter Opt-in Rate</p>
-        <canvas id="chartNewsletter"></canvas>
-      </div>
-    </div>
-  </section>
-
-  <!-- SECTION 2: Demographics -->
-  <section>
-    <div class="section-head">
-      <span class="section-num">02</span>
-      <h2 class="section-title">ข้อมูลประชากรศาสตร์ของสมาชิก</h2>
-      <span class="section-desc">Demographics</span>
     </div>
     <div class="grid grid-2" style="margin-bottom:16px;">
       <div class="card">
         <h3>เพศ</h3>
-        <p class="cardnote">Gender Split</p>
+        <p class="cardnote">Customer Demographics — Gender</p>
         <canvas id="chartGender"></canvas>
       </div>
       <div class="card">
         <h3>ช่วงอายุ</h3>
-        <p class="cardnote">Age Range</p>
+        <p class="cardnote">Customer Demographics — Age</p>
         <canvas id="chartAge"></canvas>
+      </div>
+    </div>
+    <div class="grid grid-2" style="margin-bottom:16px;">
+      <div class="card">
+        <h3>สัดส่วนลูกค้าตามสาขา</h3>
+        <p class="cardnote">Customer Distribution by Branch</p>
+        <canvas id="chartBranch"></canvas>
+      </div>
+      <div class="card">
+        <h3>Top 10 ทำเลที่พักอาศัยของสมาชิก</h3>
+        <p class="cardnote">Customer Distribution by Zone (ตอบได้มากกว่า 1)</p>
+        <table class="data-table" id="top10ResidenceTable">
+          <thead><tr><th>#</th><th>พื้นที่ / โซน</th><th style="text-align:right">จำนวน</th><th style="text-align:right">%</th></tr></thead>
+          <tbody></tbody>
+        </table>
       </div>
     </div>
     <div class="grid" style="grid-template-columns:2.1fr 1fr; gap:16px;">
       <div class="card">
-        <h3>ทำเลที่พักอาศัยของสมาชิก — แผนที่เขตกรุงเทพมหานคร</h3>
-        <p class="cardnote">Member Residence Heatmap by Bangkok Khet (ตอบได้มากกว่า 1 · ไล่สีตามจำนวนสมาชิกในโซนนั้น)</p>
+        <h3>แผนที่เขตกรุงเทพมหานคร</h3>
+        <p class="cardnote">Member Residence Heatmap by Bangkok Khet (ไล่สีตามจำนวนสมาชิกในโซนนั้น)</p>
         <div class="map-wrap">
           <svg id="bkkMap" viewBox="0 0 760 760" style="width:100%; height:auto; max-height:480px;"></svg>
           <div id="mapTooltip" class="map-tooltip"></div>
@@ -346,17 +359,7 @@
         <h3>นอกเขตกรุงเทพฯ</h3>
         <p class="cardnote">Outside the 50 Bangkok Khets</p>
         <div id="offMapList" style="display:flex; flex-direction:column; gap:10px; margin-top:6px;"></div>
-        <p class="cardnote" style="margin-top:14px;">22 เขตที่ไม่มีสี บนแผนที่ไม่ได้อยู่ในตัวเลือกโซนมาตรฐานของแบบสอบถาม จึงไม่มีข้อมูลจำนวนสมาชิกแยกเฉพาะเขต</p>
-      </div>
-    </div>
-    <div class="grid" style="grid-template-columns:1fr; margin-top:16px;">
-      <div class="card">
-        <h3>Top 10 ทำเลที่พักอาศัยของสมาชิก</h3>
-        <p class="cardnote">อันดับตามจำนวนสมาชิกที่ตอบแบบสอบถาม (ตอบได้มากกว่า 1 ตัวเลือก จึงรวมกันได้เกิน 100%) — แต่ละรายการคือ "โซน" ตามตัวเลือกในแบบสอบถาม ซึ่งบางโซนรวมหลายเขตของกรุงเทพฯ ไว้ด้วยกัน ไม่ใช่ข้อมูลระดับเขตเดี่ยว</p>
-        <table class="data-table" id="top10ResidenceTable">
-          <thead><tr><th>#</th><th>พื้นที่ / โซน</th><th style="text-align:right">จำนวนสมาชิก</th><th style="text-align:right">% ของผู้ตอบ</th></tr></thead>
-          <tbody></tbody>
-        </table>
+        <p class="cardnote" style="margin-top:14px;">เขตที่ไม่มีสีบนแผนที่ไม่ได้อยู่ในตัวเลือกโซนมาตรฐานของแบบสอบถาม จึงไม่มีข้อมูลจำนวนสมาชิกแยกเฉพาะเขต</p>
       </div>
     </div>
   </section>
@@ -365,40 +368,66 @@
 
   <div class="page" data-page="2" style="display:none;">
 
-  <!-- SECTION 3: Commercial -->
+  <div class="kpi-grid" id="kpiGrid2"></div>
+
+  <!-- SECTION 2: Customer Behavior & Value -->
   <section>
     <div class="section-head">
-      <span class="section-num">03</span>
-      <h2 class="section-title">ยอดขายและมูลค่าสมาชิก</h2>
-      <span class="section-desc">Sales &amp; Member Value</span>
+      <span class="section-num">02</span>
+      <h2 class="section-title">พฤติกรรมและมูลค่าลูกค้า</h2>
+      <span class="section-desc">Customer Behavior &amp; Value</span>
     </div>
     <div class="grid grid-2" style="margin-bottom:16px;">
       <div class="card tall">
-        <h3>ยอดขายรายเดือนจากธุรกรรม CRM (add-by-phone)</h3>
-        <p class="cardnote">Monthly Sales &amp; Transaction Count — บันทึกผ่านระบบสะสมแต้มเท่านั้น ไม่ใช่ยอดขาย POS ทั้งหมด</p>
+        <h3>ยอดขายรายเดือน &amp; ยอดซื้อเฉลี่ยต่อบิล (AOV)</h3>
+        <p class="cardnote">Monthly Sales &amp; Average Order Value — บันทึกผ่านระบบสะสมแต้มเท่านั้น ไม่ใช่ยอดขาย POS ทั้งหมด</p>
         <canvas id="chartSales"></canvas>
       </div>
       <div class="card tall">
+        <h3>มูลค่าลูกค้าตลอดอายุ (CLV) — การกระจายยอดซื้อสะสมต่อคน</h3>
+        <p class="cardnote">Customer Lifetime Value Distribution (โดยประมาณจากยอดซื้อสะสม)</p>
+        <canvas id="chartSpendBin"></canvas>
+      </div>
+    </div>
+    <div class="grid grid-2" style="margin-bottom:16px;">
+      <div class="card">
+        <h3>ช่วงเวลาที่มาใช้บริการ (วันในสัปดาห์)</h3>
+        <p class="cardnote">Visit Day — นับจากทุกธุรกรรมที่มีการบันทึกเวลา</p>
+        <canvas id="chartVisitDow"></canvas>
+      </div>
+      <div class="card">
+        <h3>ช่วงเวลาที่มาใช้บริการ (ช่วงของวัน)</h3>
+        <p class="cardnote">Visit Time</p>
+        <canvas id="chartVisitDaypart"></canvas>
+      </div>
+    </div>
+    <div class="grid grid-2" style="margin-bottom:16px;">
+      <div class="card">
+        <h3>เมนู / หมวดหมู่อาหารยอดนิยม</h3>
+        <p class="cardnote">Favorite Menu / Category</p>
+        <div class="unavailable-note">ไม่มีข้อมูลนี้ในระบบ CRM ปัจจุบัน — ข้อมูลธุรกรรมที่ดึงมามีเฉพาะยอดขายรวมต่อบิล ไม่มีรายการเมนู/หมวดหมู่สินค้าระดับรายชิ้น หากต้องการวิเคราะห์หัวข้อนี้ ต้องเชื่อมข้อมูลจากระบบ POS เพิ่มเติม</div>
+      </div>
+      <div class="card">
+        <h3>เส้นทางของลูกค้า</h3>
+        <p class="cardnote">Customer Journey — สัดส่วนที่ผ่านแต่ละขั้น (จากสมัครสมาชิกจนถึงซื้อซ้ำ)</p>
+        <canvas id="chartJourney"></canvas>
+      </div>
+    </div>
+    <div class="grid grid-2" style="margin-bottom:16px;">
+      <div class="card tall">
         <h3>สมาชิก 20 อันดับยอดซื้อสะสมสูงสุด</h3>
-        <p class="cardnote">Top 20 Spenders</p>
-        <div style="max-height:300px; overflow-y:auto;">
+        <p class="cardnote">Top Customers</p>
+        <div style="max-height:340px; overflow-y:auto;">
           <table class="data-table" id="topSpendersTable">
             <thead><tr><th>#</th><th>ชื่อ</th><th>สาขา</th><th>ระดับ</th><th style="text-align:right">ยอดซื้อสะสม</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
       </div>
-    </div>
-    <div class="grid grid-2">
-      <div class="card">
-        <h3>การกระจายยอดซื้อสะสมต่อคน</h3>
-        <p class="cardnote">Cumulative Spend per Member Distribution</p>
-        <canvas id="chartSpendBin"></canvas>
-      </div>
-      <div class="card">
-        <h3>สรุปมูลค่าเฉลี่ย</h3>
-        <p class="cardnote">Average Value Indicators</p>
-        <div id="avgValueBoxes" style="display:flex; flex-direction:column; gap:10px; margin-top:8px;"></div>
+      <div class="card tall">
+        <h3>การแบ่งกลุ่มลูกค้าแบบ RFM</h3>
+        <p class="cardnote">RFM Segmentation — Recency (ล่าสุด) × Frequency (ความถี่ซื้อ) × Monetary (ยอดซื้อสะสม)</p>
+        <canvas id="chartRFM"></canvas>
       </div>
     </div>
   </section>
@@ -407,47 +436,61 @@
 
   <div class="page" data-page="3" style="display:none;">
 
-  <!-- SECTION 4: Loyalty & Points -->
+  <div class="kpi-grid" id="kpiGrid3"></div>
+
+  <!-- SECTION 3: Loyalty & Marketing -->
   <section>
     <div class="section-head">
-      <span class="section-num">04</span>
-      <h2 class="section-title">ระบบแต้มสะสมและโปรโมชัน</h2>
-      <span class="section-desc">Loyalty Points &amp; Promotions</span>
+      <span class="section-num">03</span>
+      <h2 class="section-title">การรักษาฐานลูกค้าและการตลาด</h2>
+      <span class="section-desc">Loyalty &amp; Marketing</span>
     </div>
     <div class="grid grid-2" style="margin-bottom:16px;">
-      <div class="card tall">
+      <div class="card">
+        <h3>ระดับสมาชิก</h3>
+        <p class="cardnote">Membership Tier Distribution</p>
+        <canvas id="chartTier"></canvas>
+      </div>
+      <div class="card">
         <h3>แต้มที่ได้รับ vs แต้มที่ใช้ไป รายเดือน</h3>
-        <p class="cardnote">Points Earned vs Redeemed (คัดข้อมูลผิดปกติออกแล้ว)</p>
+        <p class="cardnote">Points &amp; Rewards (คัดข้อมูลผิดปกติออกแล้ว)</p>
         <canvas id="chartPoints"></canvas>
       </div>
-      <div class="card tall">
-        <h3>สัดส่วนประเภทธุรกรรม</h3>
-        <p class="cardnote">Transaction Type Mix</p>
-        <canvas id="chartTxnType"></canvas>
+    </div>
+    <div class="grid grid-2" style="margin-bottom:16px;">
+      <div class="card">
+        <h3>โปรโมชัน/คูปองที่แลกรับมากที่สุด</h3>
+        <p class="cardnote">Coupon Usage — Top Redeemed Promotions</p>
+        <canvas id="chartPromo" style="max-height:260px;"></canvas>
+      </div>
+      <div class="card">
+        <h3>ช่องทางที่ทำให้รู้จักร้าน</h3>
+        <p class="cardnote">Customer Acquisition Channel (ตอบได้มากกว่า 1)</p>
+        <canvas id="chartChannel"></canvas>
       </div>
     </div>
-    <div class="grid" style="grid-template-columns:1fr;">
+    <div class="grid grid-2" style="margin-bottom:16px;">
       <div class="card">
-        <h3>โปรโมชันที่แลกรับมากที่สุด</h3>
-        <p class="cardnote">Top Redeemed Promotions</p>
-        <canvas id="chartPromo" style="max-height:220px;"></canvas>
+        <h3>ผลลัพธ์แคมเปญการตลาด</h3>
+        <p class="cardnote">Campaign Performance</p>
+        <div class="unavailable-note">ไม่มีข้อมูลนี้ในระบบ CRM ปัจจุบัน — ข้อมูลที่ดึงมาไม่มีรหัส/ชื่อแคมเปญกำกับต่อธุรกรรม (มีเฉพาะการแลกโปรโมชันรายชื่อ ซึ่งแสดงไว้ในการ์ด "Coupon Usage" ด้านบนแล้ว) หากต้องการวัดผลแยกรายแคมเปญ ต้องมีการติดรหัสแคมเปญในระบบ POS/CRM เพิ่มเติม</div>
+      </div>
+      <div class="card">
+        <h3>ROI ของแต่ละแคมเปญ</h3>
+        <p class="cardnote">Campaign ROI</p>
+        <div class="unavailable-note">ไม่มีข้อมูลนี้ในระบบ CRM ปัจจุบัน — การคำนวณ ROI ต้องมีข้อมูลงบประมาณ/ค่าใช้จ่ายต่อแคมเปญ ซึ่งไม่ได้ถูกบันทึกไว้ในระบบสะสมแต้มนี้</div>
       </div>
     </div>
   </section>
 
-  <!-- SECTION 5: Voice of Customer -->
+  <!-- Bonus: additional voice-of-customer data not in the requested outline, kept for extra value -->
   <section>
     <div class="section-head">
-      <span class="section-num">05</span>
-      <h2 class="section-title">เสียงของลูกค้า</h2>
-      <span class="section-desc">Voice of Customer</span>
+      <span class="section-num">03+</span>
+      <h2 class="section-title">ข้อมูลเสียงลูกค้าเพิ่มเติม</h2>
+      <span class="section-desc">Additional — not in the requested structure, kept for reference</span>
     </div>
     <div class="grid grid-3">
-      <div class="card">
-        <h3>รู้จักร้านจากช่องทางไหน</h3>
-        <p class="cardnote">Acquisition Channel (ตอบได้มากกว่า 1)</p>
-        <canvas id="chartChannel"></canvas>
-      </div>
       <div class="card">
         <h3>สิ่งที่ประทับใจในร้าน</h3>
         <p class="cardnote">Loved Attributes (ตอบได้มากกว่า 1)</p>
@@ -457,6 +500,11 @@
         <h3>เดินทางมาร้านด้วยวิธีไหน</h3>
         <p class="cardnote">Mode of Travel (ตอบได้มากกว่า 1)</p>
         <canvas id="chartTravel"></canvas>
+      </div>
+      <div class="card">
+        <h3>การสมัครรับข่าวสาร</h3>
+        <p class="cardnote">Newsletter Opt-in Rate</p>
+        <canvas id="chartNewsletter"></canvas>
       </div>
     </div>
   </section>
@@ -606,6 +654,8 @@ function topNPlusOther(counter, n, otherLabel){
 function sortObjDesc(obj){
   return Object.fromEntries(Object.entries(obj).sort((a,b)=>b[1]-a[1]));
 }
+function custKey(c){ return c.phone || ('name:'+c.ชื่อ); }
+function usageKey(u){ return u.phone || ('name:'+u.ชื่อ); }
 
 const PREDEFINED_ZONES = new Set([
   'บางนา สวนหลวง ลาดกระบัง','ปทุมวัน บางรัก ราชเทวี','ปริมณฑล','วัฒนา คลองเตย พระโขนง',
@@ -632,6 +682,7 @@ function parseRawData(custRows, usageRows){
     const lastDt = parseThaiDate(r['การใช้งานล่าสุด']);
     return {
       ชื่อ: r['ชื่อ'],
+      phone: (r['เบอร์โทรศัพท์มือถือ'] && String(r['เบอร์โทรศัพท์มือถือ']).trim()) || null,
       สาขา_clean: cleanBranch(r['สาขา']),
       เพศ_clean: cleanGender(r['เพศ']),
       กลุ่มสมาชิก_clean: (r['ชื่อกลุ่มสมาชิก'] && String(r['ชื่อกลุ่มสมาชิก']).trim()) || 'ไม่มีกลุ่ม',
@@ -673,6 +724,7 @@ function parseRawData(custRows, usageRows){
     return {
       dt, month: toMonthKey(dt),
       ชื่อ: r['ชื่อ'],
+      phone: (r['เบอร์โทรศัพท์มือถือ'] && String(r['เบอร์โทรศัพท์มือถือ']).trim()) || null,
       สาขา_clean: cleanBranch(r['สาขา']),
       เพิ่มคะแนน: num(r['เพิ่ม คะแนน']),
       ลดคะแนน: num(r['ลด คะแนน']),
@@ -792,6 +844,116 @@ function computeAggregates(custF, usageF, NOW, outlierMeta){
   });
   const promo_top = Object.entries(promoCounter).sort((a,b)=>b[1]-a[1]).slice(0,15);
 
+
+  // Per-customer PURCHASE grouping (uses salesRows = actual sales transactions only,
+  // excluding non-purchase events like "Register to the shop" which every member has exactly once)
+  const custTxnMap = {}; // key -> { count, dts:[], salesSum }
+  salesRows.forEach(u=>{
+    const k = usageKey(u);
+    if(!custTxnMap[k]) custTxnMap[k] = { count:0, dts:[], salesSum:0 };
+    custTxnMap[k].count += 1;
+    if(u.dt) custTxnMap[k].dts.push(u.dt);
+    custTxnMap[k].salesSum += u.ยอดขาย;
+  });
+
+  // New vs Returning (based on purchase count within the filtered scope)
+  let newCustCount = 0, returningCustCount = 0, noTxnCount = 0;
+  custF.forEach(c=>{
+    const t = custTxnMap[custKey(c)];
+    if(!t || t.count===0) noTxnCount++;
+    else if(t.count===1) newCustCount++;
+    else returningCustCount++;
+  });
+  const buyers = newCustCount + returningCustCount;
+  const new_vs_returning = { 'ซื้อครั้งเดียว':newCustCount, 'ซื้อซ้ำ (2 ครั้งขึ้นไป)':returningCustCount, 'ยังไม่มีธุรกรรมซื้อ':noTxnCount };
+  const repeat_purchase_rate = buyers ? Math.round(returningCustCount/buyers*1000)/10 : 0;
+
+  // Purchase frequency: avg transactions per buyer (customers with >=1 txn)
+  const totalTxnCount = Object.values(custTxnMap).reduce((s,t)=>s+t.count,0);
+  const avg_purchase_frequency = buyers ? Math.round(totalTxnCount/buyers*10)/10 : 0;
+
+  // Avg days between visits (customers with >=2 dated transactions)
+  let gapSum = 0, gapCustCount = 0;
+  Object.values(custTxnMap).forEach(t=>{
+    const dts = t.dts.slice().sort((a,b)=>a-b);
+    if(dts.length < 2) return;
+    let sum = 0;
+    for(let i=1;i<dts.length;i++) sum += (dts[i]-dts[i-1])/86400000;
+    gapSum += sum/(dts.length-1);
+    gapCustCount++;
+  });
+  const avg_days_between_visits = gapCustCount ? Math.round(gapSum/gapCustCount*10)/10 : null;
+
+  // CLV proxy: average lifetime cumulative spend (ยอดซื้อสะสม, a running total kept on the customer record)
+  const clv_avg = custF.length ? Math.round(custF.reduce((s,c)=>s+c.ยอดซื้อสะสม,0)/custF.length) : 0;
+
+  // Visit timing: day-of-week & day-part distribution of transactions
+  const DOW_TH = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+  const visit_by_dow_raw = {};
+  DOW_TH.forEach(d=>visit_by_dow_raw[d]=0);
+  const visit_by_daypart = { 'เช้า (ก่อน 11:00)':0, 'เที่ยง (11:00-14:00)':0, 'บ่าย (14:00-17:00)':0, 'เย็น (17:00-21:00)':0, 'ดึก (หลัง 21:00)':0 };
+  usageF.forEach(u=>{
+    if(!u.dt) return;
+    visit_by_dow_raw[DOW_TH[u.dt.getDay()]]++;
+    const h = u.dt.getHours();
+    if(h<11) visit_by_daypart['เช้า (ก่อน 11:00)']++;
+    else if(h<14) visit_by_daypart['เที่ยง (11:00-14:00)']++;
+    else if(h<17) visit_by_daypart['บ่าย (14:00-17:00)']++;
+    else if(h<21) visit_by_daypart['เย็น (17:00-21:00)']++;
+    else visit_by_daypart['ดึก (หลัง 21:00)']++;
+  });
+  const dowOrderMonFirst = ['จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์','อาทิตย์'];
+  const visit_by_dow = {};
+  dowOrderMonFirst.forEach(d=>visit_by_dow[d]=visit_by_dow_raw[d]);
+
+  // RFM segmentation (R: recency bucket already computed per customer; F: txn count in filtered scope; M: lifetime cumulative spend)
+  const fValues = custF.map(c => (custTxnMap[custKey(c)]?.count)||0).filter(v=>v>0).sort((a,b)=>a-b);
+  const mValues = custF.map(c => c.ยอดซื้อสะสม).filter(v=>v>0).sort((a,b)=>a-b);
+  function tertileScore(value, sortedArr){
+    if(!sortedArr.length || value<=0) return 1;
+    const p33 = sortedArr[Math.floor(sortedArr.length*0.33)];
+    const p66 = sortedArr[Math.floor(sortedArr.length*0.66)];
+    if(value <= p33) return 1;
+    if(value <= p66) return 2;
+    return 3;
+  }
+  function recencyScore(bucket){
+    if(bucket==='0-30 วัน') return 3;
+    if(bucket==='31-90 วัน') return 3;
+    if(bucket==='91-180 วัน') return 2;
+    return 1;
+  }
+  const rfm_segments = { 'ลูกค้าคนสำคัญ (Champions)':0, 'ลูกค้าประจำ (Loyal)':0, 'ลูกค้าที่ต้องดูแล (Need Attention)':0, 'เสี่ยงหาย (At Risk)':0, 'หายไปแล้ว (Lost)':0 };
+  custF.forEach(c=>{
+    const f = (custTxnMap[custKey(c)]?.count)||0;
+    const r = recencyScore(c.recency_bucket);
+    const fS = tertileScore(f, fValues);
+    const mS = tertileScore(c.ยอดซื้อสะสม, mValues);
+    const total = r+fS+mS;
+    let seg;
+    if(r>=3 && total>=7) seg = 'ลูกค้าคนสำคัญ (Champions)';
+    else if(r>=2 && total>=6) seg = 'ลูกค้าประจำ (Loyal)';
+    else if(r===1 && total>=6) seg = 'เสี่ยงหาย (At Risk)';
+    else if(r===1 && total<=4) seg = 'หายไปแล้ว (Lost)';
+    else seg = 'ลูกค้าที่ต้องดูแล (Need Attention)';
+    rfm_segments[seg]++;
+  });
+
+  // Customer journey funnel: registered -> 1st purchase -> repeat (2nd) -> loyal (3rd+)
+  const journeyMade1 = custF.filter(c => (custTxnMap[custKey(c)]?.count||0) >= 1).length;
+  const journeyMade2 = custF.filter(c => (custTxnMap[custKey(c)]?.count||0) >= 2).length;
+  const journeyMade3 = custF.filter(c => (custTxnMap[custKey(c)]?.count||0) >= 3).length;
+  const customer_journey = [
+    { stage:'สมัครสมาชิก', count: custF.length },
+    { stage:'ซื้อครั้งแรก', count: journeyMade1 },
+    { stage:'ซื้อซ้ำครั้งที่ 2', count: journeyMade2 },
+    { stage:'ซื้อซ้ำ 3 ครั้งขึ้นไป', count: journeyMade3 },
+  ];
+
+  // Churn: recency-based proxy (no purchase/visit in the last 180+ days)
+  const churnedCount = custF.filter(c => ['181-365 วัน','มากกว่า 365 วัน','ไม่เคยใช้งาน'].includes(c.recency_bucket)).length;
+  const churn_rate = custF.length ? Math.round(churnedCount/custF.length*1000)/10 : 0;
+
   // ---- KPIs (all computed on the filtered subset) ----
   const total_members = custF.length;
   const active_members = custF.filter(c => c.recency_bucket==='0-30 วัน' || c.recency_bucket==='31-90 วัน').length;
@@ -817,6 +979,11 @@ function computeAggregates(custF, usageF, NOW, outlierMeta){
     points_earned_total: Math.round(points_earned_total), points_redeemed_total: Math.round(points_redeemed_total),
     newsletter_opt_in_rate, data_snapshot_date,
     n_outliers_removed: outlierMeta.n_outliers_removed, outlier_names: outlierMeta.outlier_names,
+    // Customer Behavior & Value
+    buyers, newCustCount, returningCustCount, noTxnCount,
+    repeat_purchase_rate, avg_purchase_frequency, avg_days_between_visits, clv_avg,
+    // Loyalty & Marketing
+    retention_rate: active_rate, churn_rate, churnedCount,
   };
 
   // ---- Bangkok map: merge static geo with live (filtered) zone totals ----
@@ -838,11 +1005,10 @@ function computeAggregates(custF, usageF, NOW, outlierMeta){
     channel_n: channelSplit.respondents, impression_n: impressionSplit.respondents, travel_n: travelSplit.respondents,
     residence_counts: sortObjDesc(residence_counts), residence_n,
     txn_type_counts, pts_trend, sales_trend, promo_top,
+    new_vs_returning, visit_by_dow, visit_by_daypart, rfm_segments, customer_journey,
     branch_order: BRANCH_ORDER, bkk_map,
   };
 }
-
-// ===================== RENDERING (unchanged shape from DATA) =====================
 
 // ===================== RENDERING (unchanged shape from DATA) =====================
 let RAW = null;   // { cust, usageClean, NOW, n_outliers_removed, outlier_names } — unfiltered, cleaned rows
@@ -957,22 +1123,67 @@ const valueLabelsPlugin = {
 // ===================== KPI CARDS (fully filter-reactive) =====================
 function renderKPIs(){
   const k = DATA.kpi;
-  const kpiDefs = [
-    {label:'สมาชิกในตัวกรองนี้', value:fmtNum(k.total_members), sub:'Filtered Members', cls:''},
-    {label:'สมาชิก Active (ใช้งานใน 90 วัน)', value:fmtNum(k.active_members), sub:`${k.active_rate}% ของสมาชิกในตัวกรอง`, cls:'jade'},
-    {label:'สมาชิกใหม่ 30 วันล่าสุด', value:fmtNum(k.members_30d), sub:'New Members (30d, in filter)', cls:'gold'},
-    {label:'ยอดขายในตัวกรองนี้', value:fmtBaht(k.total_sales), sub:`${fmtNum(k.total_sales_txns)} ธุรกรรม`, cls:'indigo'},
-    {label:'แต้มสุทธิในตัวกรองนี้', value:fmtNum(k.points_earned_total-k.points_redeemed_total), sub:`ได้รับ ${fmtNum(k.points_earned_total)} · ใช้ไป ${fmtNum(k.points_redeemed_total)}`, cls:'maroon'},
-    {label:'ยอดซื้อเฉลี่ยต่อบิล', value:fmtBaht(k.avg_ticket), sub:'Avg Ticket Size', cls:'indigo'},
-    {label:'แต้มคงเหลือในระบบ', value:fmtNum(k.total_points_balance), sub:'Outstanding Points Liability', cls:'maroon'},
-    {label:'อัตราการรับข่าวสาร', value:k.newsletter_opt_in_rate+'%', sub:'Newsletter Opt-in Rate', cls:'gold'},
+  const inactiveCount = k.total_members - k.active_members;
+  const topBranchEntry = Object.entries(DATA.branch_counts).sort((a,b)=>b[1]-a[1])[0];
+  const topBranch = topBranchEntry ? topBranchEntry[0] : '-';
+
+  const kpi1 = [
+    {label:'ลูกค้าทั้งหมด', value:fmtNum(k.total_members), sub:'Total Customers', cls:''},
+    {label:'ลูกค้าใหม่ 30 วันล่าสุด', value:fmtNum(k.members_30d), sub:'New Customers (rolling 30d)', cls:'gold'},
+    {label:'ลูกค้าที่ใช้งานอยู่', value:fmtNum(k.active_members), sub:`${k.active_rate}% ของลูกค้าในตัวกรอง (Active)`, cls:'jade'},
+    {label:'ลูกค้าที่ไม่ได้ใช้งาน', value:fmtNum(inactiveCount), sub:`${(100-k.active_rate).toFixed(1)}% (Inactive)`, cls:'maroon'},
+    {label:'สาขาที่มีลูกค้ามากที่สุด', value:topBranch, sub:`${fmtNum(topBranchEntry?topBranchEntry[1]:0)} คน`, cls:'indigo'},
   ];
-  document.getElementById('kpiGrid').innerHTML = kpiDefs.map(d => `
+  document.getElementById('kpiGrid1').innerHTML = kpi1.map(d => `
     <div class="kpi ${d.cls}">
       <div class="kpi-label">${d.label}</div>
       <div class="kpi-value">${d.value}</div>
       <div class="kpi-sub">${d.sub}</div>
     </div>`).join('');
+
+  const kpi2 = [
+    {label:'ความถี่การซื้อเฉลี่ย', value:k.avg_purchase_frequency+' ครั้ง', sub:'Purchase Frequency (ต่อผู้ที่เคยซื้อ 1 คน)', cls:'gold'},
+    {label:'ยอดซื้อเฉลี่ยต่อบิล', value:fmtBaht(k.avg_ticket), sub:'Average Order Value (AOV)', cls:'indigo'},
+    {label:'มูลค่าลูกค้าตลอดอายุ', value:fmtBaht(k.clv_avg), sub:'CLV โดยประมาณ ต่อคน', cls:'maroon'},
+    {label:'ระยะห่างเฉลี่ยระหว่างการมาซื้อ', value: (k.avg_days_between_visits!==null? k.avg_days_between_visits+' วัน' : 'N/A'), sub:'Avg Days Between Visits', cls:'jade'},
+  ];
+  document.getElementById('kpiGrid2').innerHTML = kpi2.map(d => `
+    <div class="kpi ${d.cls}">
+      <div class="kpi-label">${d.label}</div>
+      <div class="kpi-value">${d.value}</div>
+      <div class="kpi-sub">${d.sub}</div>
+    </div>`).join('');
+
+  const kpi3 = [
+    {label:'อัตราการรักษาฐานลูกค้า', value:k.retention_rate+'%', sub:'Retention Rate (Active ใน 90 วัน)', cls:'jade'},
+    {label:'อัตราการซื้อซ้ำ', value:k.repeat_purchase_rate+'%', sub:'Repeat Purchase Rate (ของผู้ที่เคยซื้อ)', cls:'gold'},
+    {label:'อัตราการหายไปของลูกค้า', value:k.churn_rate+'%', sub:'Churn Rate (ไม่ใช้งาน 180 วันขึ้นไป)', cls:'maroon'},
+    {label:'แต้มคงเหลือในระบบ', value:fmtNum(k.total_points_balance), sub:'Outstanding Points Liability', cls:'indigo'},
+    {label:'อัตราการรับข่าวสาร', value:k.newsletter_opt_in_rate+'%', sub:'Newsletter Opt-in Rate', cls:'gold'},
+  ];
+  document.getElementById('kpiGrid3').innerHTML = kpi3.map(d => `
+    <div class="kpi ${d.cls}">
+      <div class="kpi-label">${d.label}</div>
+      <div class="kpi-value">${d.value}</div>
+      <div class="kpi-sub">${d.sub}</div>
+    </div>`).join('');
+}
+
+function renderExecSummary(){
+  const k = DATA.kpi;
+  const topBranchEntry = Object.entries(DATA.branch_counts).sort((a,b)=>b[1]-a[1])[0];
+  const topChannelEntry = Object.entries(DATA.channel_counts).filter(([k])=>k!=='อื่นๆ').sort((a,b)=>b[1]-a[1])[0];
+  const topZoneEntry = Object.entries(DATA.residence_counts)[0];
+  const bullets = [
+    `มีลูกค้าทั้งหมด <b>${fmtNum(k.total_members)}</b> คนในตัวกรองนี้ โดย <b>${k.active_rate}%</b> (${fmtNum(k.active_members)} คน) ยังใช้งานอยู่ในช่วง 90 วันที่ผ่านมา`,
+    `สาขาที่มีลูกค้ามากที่สุดคือ <b>${topBranchEntry?topBranchEntry[0]:'-'}</b> (${fmtNum(topBranchEntry?topBranchEntry[1]:0)} คน)`,
+    `ยอดขายรวมในตัวกรองนี้ <b>${fmtBaht(k.total_sales)}</b> จาก ${fmtNum(k.total_sales_txns)} ธุรกรรม เฉลี่ย <b>${fmtBaht(k.avg_ticket)}</b> ต่อบิล`,
+    `ในจำนวนลูกค้าที่เคยซื้อ (${fmtNum(k.buyers)} คน) มี <b>${k.repeat_purchase_rate}%</b> ที่กลับมาซื้อซ้ำตั้งแต่ 2 ครั้งขึ้นไป`,
+    `ลูกค้าที่มีความเสี่ยงจะหายไป (ไม่ได้ใช้งานเกิน 180 วัน) มีสัดส่วน <b>${k.churn_rate}%</b> ของฐานลูกค้าในตัวกรองนี้`,
+    topChannelEntry ? `ช่องทางที่ทำให้รู้จักร้านมากที่สุดคือ <b>${topChannelEntry[0]}</b> (${Math.round(topChannelEntry[1]/DATA.channel_n*100)}% ของผู้ตอบ)` : '',
+    topZoneEntry ? `ทำเลที่พักอาศัยที่พบมากที่สุดคือ <b>${topZoneEntry[0]}</b>` : '',
+  ].filter(Boolean);
+  document.getElementById('execSummary').innerHTML = bullets.map(b=>`<li>${b}</li>`).join('');
 }
 
 // ===================== FILTER UI =====================
@@ -1072,6 +1283,56 @@ function updateAll(){
     type:'bar',
     data:{ labels:Object.keys(DATA.recency_counts), datasets:[{ data:Object.values(DATA.recency_counts), backgroundColor:COLORS.jade, borderRadius:4 }] },
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, layout:{padding:{right:60}},
+      plugins:{legend:{display:false}, valueLabels:{mode:'share'}},
+      scales:{ x:{grid:{color:COLORS.grid}}, y:{grid:{display:false}} } }
+  });
+
+  // --- New vs Returning ---
+  makeOrUpdate('chartNewVsReturning', {
+    type:'doughnut',
+    data:{ labels:Object.keys(DATA.new_vs_returning), datasets:[{ data:Object.values(DATA.new_vs_returning), backgroundColor:[COLORS.gold, COLORS.jade, '#E4DBC7'] }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:legendBottom, valueLabels:{mode:'share'} }, cutout:'58%' }
+  });
+
+  // --- Active vs Inactive ---
+  const inactiveN = DATA.kpi.total_members - DATA.kpi.active_members;
+  makeOrUpdate('chartActiveInactive', {
+    type:'doughnut',
+    data:{ labels:['ใช้งานอยู่ (Active)','ไม่ได้ใช้งาน (Inactive)'], datasets:[{ data:[DATA.kpi.active_members, inactiveN], backgroundColor:[COLORS.jade, COLORS.maroon] }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:legendBottom, valueLabels:{mode:'share'} }, cutout:'62%' }
+  });
+
+  // --- Visit day-of-week / day-part ---
+  makeOrUpdate('chartVisitDow', {
+    type:'bar',
+    data:{ labels:Object.keys(DATA.visit_by_dow), datasets:[{ data:Object.values(DATA.visit_by_dow), backgroundColor:COLORS.indigo, borderRadius:4 }] },
+    options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:18}},
+      plugins:{legend:{display:false}, valueLabels:{mode:'share'}},
+      scales:{ x:{grid:{display:false}, ticks:{font:{size:10}}}, y:{grid:{color:COLORS.grid}} } }
+  });
+  makeOrUpdate('chartVisitDaypart', {
+    type:'bar',
+    data:{ labels:Object.keys(DATA.visit_by_daypart), datasets:[{ data:Object.values(DATA.visit_by_daypart), backgroundColor:COLORS.gold, borderRadius:4 }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, layout:{padding:{right:60}},
+      plugins:{legend:{display:false}, valueLabels:{mode:'share'}},
+      scales:{ x:{grid:{color:COLORS.grid}}, y:{grid:{display:false}, ticks:{font:{size:10.5}}} } }
+  });
+
+  // --- Customer Journey funnel ---
+  makeOrUpdate('chartJourney', {
+    type:'bar',
+    data:{ labels:DATA.customer_journey.map(j=>j.stage), datasets:[{ data:DATA.customer_journey.map(j=>j.count), backgroundColor:[COLORS.gold, COLORS.indigo, COLORS.jade, COLORS.maroon], borderRadius:4 }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, layout:{padding:{right:90}},
+      plugins:{legend:{display:false}, valueLabels:{mode:'share', total:DATA.kpi.total_members}},
+      scales:{ x:{grid:{color:COLORS.grid}}, y:{grid:{display:false}} } }
+  });
+
+  // --- RFM segments ---
+  const rfmLabels = Object.keys(DATA.rfm_segments);
+  makeOrUpdate('chartRFM', {
+    type:'bar',
+    data:{ labels:rfmLabels, datasets:[{ data:rfmLabels.map(l=>DATA.rfm_segments[l]), backgroundColor:[COLORS.gold, COLORS.jade, COLORS.indigo, COLORS.maroon2, COLORS.maroon], borderRadius:4 }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, layout:{padding:{right:70}},
       plugins:{legend:{display:false}, valueLabels:{mode:'share'}},
       scales:{ x:{grid:{color:COLORS.grid}}, y:{grid:{display:false}} } }
   });
@@ -1201,16 +1462,14 @@ function updateAll(){
       <td class="num">${fmtBaht(s['ยอดซื้อสะสม'])}</td>
     </tr>`).join('');
 
-  document.getElementById('avgValueBoxes').innerHTML = `
-    <div class="note-box"><b style="color:var(--ink);">${fmtBaht(DATA.kpi.avg_ticket)}</b> — ยอดซื้อเฉลี่ยต่อบิล (จากธุรกรรม add-by-phone ${fmtNum(DATA.kpi.total_sales_txns)} รายการ ในตัวกรองนี้)</div>
-    <div class="note-box"><b style="color:var(--ink);">${fmtNum(DATA.kpi.avg_points_balance)}</b> — แต้มคงเหลือเฉลี่ยต่อสมาชิก 1 คน (ในตัวกรองนี้)</div>
-    <div class="note-box"><b style="color:var(--ink);">${fmtNum(DATA.kpi.total_points_earned_alltime)}</b> — แต้มสะสมรวมที่เคยได้รับตลอดอายุสมาชิก (คะแนนสะสม, ในตัวกรองนี้)</div>
-  `;
+  renderExecSummary();
 
   document.getElementById('cleaningNotes').innerHTML = `
     <li>ข้อมูลนี้ดึงสดจาก Google Sheets โดยตรง (2 ชีท: รายงานข้อมูลลูกค้า และ รายงานการใช้งาน) ทุกครั้งที่เปิดหน้านี้ และรีเฟรชอัตโนมัติทุก 5 นาที</li>
     <li>ทุกการ์ด/กราฟในหน้านี้กรองตามสาขาและช่วงเดือนที่เลือกด้านบน — ตัวเลข "สัดส่วน %" คำนวณจากฐานของกลุ่มที่กรองแล้ว ไม่ใช่ฐานสมาชิกทั้งหมด</li>
     <li>ลบธุรกรรมที่มีค่าผิดปกติ (แต้มเพิ่ม/ลด สูงเกิน 5,000 แต้มต่อครั้ง) จำนวน ${DATA.kpi.n_outliers_removed} รายการ${DATA.kpi.outlier_names.length? ` จากบัญชี "${DATA.kpi.outlier_names.join(', ')}"`:''} ออกจากทั้งชุดข้อมูลก่อนกรองตามฟิลเตอร์ (เป็นการทำความสะอาดข้อมูล ไม่ใช่ตัวกรอง)</li>
+    <li>ตัวเลขพฤติกรรมการซื้อ (ความถี่, ลูกค้าใหม่/ซื้อซ้ำ, CLV, RFM, Customer Journey) นับเฉพาะธุรกรรมประเภท "แลกแต้มด้วยเบอร์โทร" (add-by-phone) ที่ผูกกับยอดขายจริง ไม่รวมธุรกรรม "สมัครสมาชิก" หรือ "แลกโปรโมชัน" ที่ไม่ใช่การซื้อ</li>
+    <li>Retention / Churn / Repeat Purchase Rate เป็นตัวชี้วัดโดยประมาณจากความล่าสุดในการใช้งานและจำนวนครั้งที่ซื้อ ไม่ใช่การคำนวณแบบ cohort รายเดือนเต็มรูปแบบ</li>
     <li>รวมคำตอบข้อความอิสระที่สะกดต่างกันแต่ความหมายเดียวกันในหัวข้อ "รู้จักร้านจากช่องทางไหน" / "เดินทางมาร้านด้วยวิธีไหน" และจัดกลุ่มคำตอบปลีกย่อยที่พบน้อยไว้ในหมวด "อื่นๆ"</li>
     <li>เขตที่พักอาศัยที่เป็นข้อความอิสระถูกจัดรวมเป็น "พื้นที่อื่นๆ (ระบุเอง)" แยกจาก 11 โซนหลัก</li>
     <li>ช่วงอายุที่ผิดพลาดจากข้อมูลต้นทาง (เช่น "115-119" ปี) ถูกคัดออกจากกราฟช่วงอายุ</li>

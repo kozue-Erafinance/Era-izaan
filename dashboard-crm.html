@@ -51,7 +51,7 @@
     opacity:0.55;
   }
   header.top{
-    position:sticky; top:0; z-index:50;
+    position:static;
     background:rgba(251,248,241,0.92);
     backdrop-filter:blur(10px);
     border-bottom:1px solid var(--panel-line);
@@ -116,8 +116,21 @@
 
   /* KPI grid */
   .kpi-grid{
-    display:grid; grid-template-columns:repeat(auto-fit, minmax(158px,1fr)); gap:12px; margin-bottom:34px;
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(158px,1fr)); gap:12px; margin-bottom:24px;
   }
+
+  /* Tab navigation */
+  .tabnav{
+    display:flex; gap:8px; margin-bottom:28px; border-bottom:1px solid var(--panel-line); padding-bottom:0;
+    flex-wrap:wrap;
+  }
+  .tabbtn{
+    padding:11px 18px; border:none; background:transparent; color:var(--ink-faint);
+    font-family:'IBM Plex Sans Thai',sans-serif; font-size:13.5px; font-weight:500; cursor:pointer;
+    border-bottom:2.5px solid transparent; margin-bottom:-1px; transition:all .15s ease;
+  }
+  .tabbtn:hover{ color:var(--ink); }
+  .tabbtn.active{ color:var(--gold-dim); border-bottom-color:var(--gold); font-weight:600; }
   .kpi{
     background:var(--panel); border:1px solid var(--panel-line); border-radius:var(--radius);
     padding:16px 16px 14px; position:relative; overflow:hidden;
@@ -249,10 +262,18 @@
       <span style="color:var(--ink-faint);font-size:12px;">ถึง</span>
       <select id="monthTo" class="msel"></select>
     </div>
-    <div class="filternote">ตัวกรองเดือนมีผลกับ KPI สมาชิกใหม่/ยอดขาย/แต้มสุทธิ และกราฟการเติบโตของสมาชิก / ยอดขาย / แต้มสะสม — สาขาไม่มีผลกับยอดขายและแต้ม เนื่องจากข้อมูลดิบไม่ได้บันทึกสาขาในธุรกรรมประเภทนี้</div>
+    <div class="filternote">ตัวกรองสาขา/เดือนมีผลกับทุกการ์ดในหน้านี้ — สำหรับยอดขายและแต้ม การกรองสาขาจะนับเฉพาะธุรกรรมที่มีการบันทึกสาขาไว้เท่านั้น (ธุรกรรมประเภท "แลกแต้มด้วยเบอร์โทร" ส่วนใหญ่ไม่มีสาขากำกับ จึงถูกนับเฉพาะตอนเลือก "ทั้งหมด")</div>
   </div>
 
   <div class="kpi-grid" id="kpiGrid"></div>
+
+  <div class="tabnav">
+    <button class="tabbtn active" data-page="1">01 · Customer Overview</button>
+    <button class="tabbtn" data-page="2">02 · Customer Behavior &amp; Value</button>
+    <button class="tabbtn" data-page="3">03 · Loyalty &amp; Marketing</button>
+  </div>
+
+  <div class="page" data-page="1">
 
   <!-- SECTION 1: Growth & Engagement -->
   <section>
@@ -340,6 +361,10 @@
     </div>
   </section>
 
+  </div><!-- /page 1 -->
+
+  <div class="page" data-page="2" style="display:none;">
+
   <!-- SECTION 3: Commercial -->
   <section>
     <div class="section-head">
@@ -377,6 +402,10 @@
       </div>
     </div>
   </section>
+
+  </div><!-- /page 2 -->
+
+  <div class="page" data-page="3" style="display:none;">
 
   <!-- SECTION 4: Loyalty & Points -->
   <section>
@@ -432,6 +461,8 @@
     </div>
   </section>
 
+  </div><!-- /page 3 -->
+
 </main>
 
 <div class="mudmee"></div>
@@ -485,8 +516,9 @@ const PAPA_URLS = [
   'https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js'
 ];
 
-function fmtNum(n){ return Math.round(n||0).toLocaleString('th-TH'); }
-function fmtBaht(n){ return '฿' + Math.round(n||0).toLocaleString('th-TH'); }
+function toSafeNum(n){ const v = typeof n === 'number' ? n : Number(n); return (isFinite(v) ? v : 0); }
+function fmtNum(n){ return Math.round(toSafeNum(n)).toLocaleString('th-TH'); }
+function fmtBaht(n){ return '฿' + Math.round(toSafeNum(n)).toLocaleString('th-TH'); }
 
 // ===================== CSV FETCH =====================
 function fetchSheet(gid, label){
@@ -593,7 +625,7 @@ const SPEND_BINS = [
 ];
 
 // ===================== MAIN PROCESSING PIPELINE =====================
-function processData(custRows, usageRows){
+function parseRawData(custRows, usageRows){
   // ---- customer sheet ----
   const cust = custRows.filter(r => r['ชื่อ'] && String(r['ชื่อ']).trim() !== '').map(r=>{
     const regDt = parseThaiDate(r['วันที่สมัครสมาชิก']);
@@ -617,13 +649,12 @@ function processData(custRows, usageRows){
     };
   });
 
-  // NOW = latest date seen across registration / last-used
+  // NOW = latest date seen across registration / last-used (fixed reference point, independent of filters)
   let NOW = new Date(2020,0,1);
   cust.forEach(c=>{
     if(c.regDt && c.regDt > NOW) NOW = c.regDt;
     if(c.lastDt && c.lastDt > NOW) NOW = c.lastDt;
   });
-
   function recencyBucket(d){
     if(!d) return 'ไม่เคยใช้งาน';
     const days = Math.floor((NOW - d) / 86400000);
@@ -635,73 +666,7 @@ function processData(custRows, usageRows){
   }
   cust.forEach(c => c.recency_bucket = recencyBucket(c.lastDt));
 
-  // ---- distributions ----
-  const branch_counts = {};
-  cust.forEach(c => { const b = c.สาขา_clean || 'ไม่ระบุ'; branch_counts[b] = (branch_counts[b]||0)+1; });
-
-  const tier_counts = {};
-  cust.forEach(c => { tier_counts[c.กลุ่มสมาชิก_clean] = (tier_counts[c.กลุ่มสมาชิก_clean]||0)+1; });
-
-  const gender_counts = {};
-  cust.forEach(c => { gender_counts[c.เพศ_clean] = (gender_counts[c.เพศ_clean]||0)+1; });
-
-  const ageRaw = {};
-  cust.forEach(c => { if(c.ช่วงอายุ) ageRaw[c.ช่วงอายุ] = (ageRaw[c.ช่วงอายุ]||0)+1; });
-  const age_counts = {};
-  AGE_ORDER.forEach(a => { if(ageRaw[a]!==undefined) age_counts[a] = ageRaw[a]; });
-
-  const recencyOrder = ['0-30 วัน','31-90 วัน','91-180 วัน','181-365 วัน','มากกว่า 365 วัน','ไม่เคยใช้งาน'];
-  const recencyRaw = {};
-  cust.forEach(c => { recencyRaw[c.recency_bucket] = (recencyRaw[c.recency_bucket]||0)+1; });
-  const recency_counts = {};
-  recencyOrder.forEach(r => recency_counts[r] = recencyRaw[r] || 0);
-
-  const newsletter_counts = {};
-  cust.forEach(c => { newsletter_counts[c.รับข่าวสาร] = (newsletter_counts[c.รับข่าวสาร]||0)+1; });
-
-  // ---- reg trend (month x branch) ----
-  const regTrendMap = {};
-  cust.forEach(c=>{
-    if(!c.reg_month) return;
-    const key = c.reg_month + '|' + (c.สาขา_clean||'');
-    regTrendMap[key] = (regTrendMap[key]||0)+1;
-  });
-  const reg_trend = Object.entries(regTrendMap).map(([k,count])=>{
-    const [reg_month, สาขา_clean] = k.split('|');
-    return { reg_month, สาขา_clean: สาขา_clean||null, count };
-  });
-
-  // ---- multi-select fields ----
-  const channelSplit = splitMulti(cust.map(c=>c.รู้จักร้านจากช่องทางไหน));
-  const impressionSplit = splitMulti(cust.map(c=>c.สิ่งที่ประทับใจในร้าน));
-  const travelSplit = splitMulti(cust.map(c=>c.เดินทางมาร้านด้วยวิธีไหน));
-  const channel_counts = topNPlusOther(channelSplit.counter, 6, 'อื่นๆ');
-  const impression_counts = topNPlusOther(impressionSplit.counter, 7, 'อื่นๆ');
-  const travel_counts = topNPlusOther(travelSplit.counter, 5, 'อื่นๆ');
-
-  // ---- residence zones ----
-  const residenceSplit = splitMulti(cust.map(c=>c.พักอยู่อาศัยแถวไหน));
-  const residence_counts = {};
-  let otherTotal = 0;
-  Object.entries(residenceSplit.counter).forEach(([k,v])=>{
-    if(PREDEFINED_ZONES.has(k)) residence_counts[k] = v;
-    else otherTotal += v;
-  });
-  if(otherTotal) residence_counts['พื้นที่อื่นๆ (ระบุเอง)'] = otherTotal;
-  const residence_n = residenceSplit.respondents;
-
-  // ---- spend distribution & top spenders ----
-  const spend_bin_counts = {};
-  SPEND_BINS.forEach(b => spend_bin_counts[b.label] = 0);
-  cust.forEach(c=>{
-    const v = c.ยอดซื้อสะสม;
-    for(const b of SPEND_BINS){ if(v < b.max){ spend_bin_counts[b.label]++; break; } }
-  });
-  const top_spenders = [...cust].filter(c=>c.ยอดซื้อสะสม>0)
-    .sort((a,b)=>b.ยอดซื้อสะสม - a.ยอดซื้อสะสม).slice(0,20)
-    .map(c=>({ ชื่อ:c.ชื่อ, สาขา_clean:c.สาขา_clean, ยอดซื้อสะสม:c.ยอดซื้อสะสม, คะแนนคงเหลือ:c.คะแนนคงเหลือ, กลุ่มสมาชิก_clean:c.กลุ่มสมาชิก_clean }));
-
-  // ---- usage sheet ----
+  // ---- usage sheet (outlier removal is a data-quality step, not a filter — always applied) ----
   const OUTLIER_THRESHOLD = 5000;
   const usageAll = usageRows.filter(r => r['วันที่'] && String(r['วันที่']).trim()!=='').map(r=>{
     const dt = parseThaiDate(r['วันที่']);
@@ -720,12 +685,84 @@ function processData(custRows, usageRows){
   const outlierNames = [...new Set(outliers.map(o=>o.ชื่อ))];
   const usageClean = usageAll.filter(u => u.เพิ่มคะแนน <= OUTLIER_THRESHOLD && u.ลดคะแนน <= OUTLIER_THRESHOLD);
 
-  const txn_type_counts = {};
-  usageClean.forEach(u => { const t = u.ประเภท||'ไม่ระบุ'; txn_type_counts[t] = (txn_type_counts[t]||0)+1; });
+  return { cust, usageClean, NOW, n_outliers_removed: outliers.length, outlier_names: outlierNames };
+}
 
-  // points trend
+// Recompute every aggregate from a (possibly filtered) subset of cleaned rows.
+// custF / usageF = filtered arrays; NOW/outlierMeta come from the unfiltered parse (fixed reference points).
+function computeAggregates(custF, usageF, NOW, outlierMeta){
+  // ---- distributions ----
+  const branch_counts = {};
+  custF.forEach(c => { const b = c.สาขา_clean || 'ไม่ระบุ'; branch_counts[b] = (branch_counts[b]||0)+1; });
+
+  const tier_counts = {};
+  custF.forEach(c => { tier_counts[c.กลุ่มสมาชิก_clean] = (tier_counts[c.กลุ่มสมาชิก_clean]||0)+1; });
+
+  const gender_counts = {};
+  custF.forEach(c => { gender_counts[c.เพศ_clean] = (gender_counts[c.เพศ_clean]||0)+1; });
+
+  const ageRaw = {};
+  custF.forEach(c => { if(c.ช่วงอายุ) ageRaw[c.ช่วงอายุ] = (ageRaw[c.ช่วงอายุ]||0)+1; });
+  const age_counts = {};
+  AGE_ORDER.forEach(a => { if(ageRaw[a]!==undefined) age_counts[a] = ageRaw[a]; });
+
+  const recencyOrder = ['0-30 วัน','31-90 วัน','91-180 วัน','181-365 วัน','มากกว่า 365 วัน','ไม่เคยใช้งาน'];
+  const recencyRaw = {};
+  custF.forEach(c => { recencyRaw[c.recency_bucket] = (recencyRaw[c.recency_bucket]||0)+1; });
+  const recency_counts = {};
+  recencyOrder.forEach(r => recency_counts[r] = recencyRaw[r] || 0);
+
+  const newsletter_counts = {};
+  custF.forEach(c => { newsletter_counts[c.รับข่าวสาร] = (newsletter_counts[c.รับข่าวสาร]||0)+1; });
+
+  // ---- reg trend (month x branch) — always computed from full history of the filtered set ----
+  const regTrendMap = {};
+  custF.forEach(c=>{
+    if(!c.reg_month) return;
+    const key = c.reg_month + '|' + (c.สาขา_clean||'');
+    regTrendMap[key] = (regTrendMap[key]||0)+1;
+  });
+  const reg_trend = Object.entries(regTrendMap).map(([k,count])=>{
+    const [reg_month, สาขา_clean] = k.split('|');
+    return { reg_month, สาขา_clean: สาขา_clean||null, count };
+  });
+
+  // ---- multi-select fields ----
+  const channelSplit = splitMulti(custF.map(c=>c.รู้จักร้านจากช่องทางไหน));
+  const impressionSplit = splitMulti(custF.map(c=>c.สิ่งที่ประทับใจในร้าน));
+  const travelSplit = splitMulti(custF.map(c=>c.เดินทางมาร้านด้วยวิธีไหน));
+  const channel_counts = topNPlusOther(channelSplit.counter, 6, 'อื่นๆ');
+  const impression_counts = topNPlusOther(impressionSplit.counter, 7, 'อื่นๆ');
+  const travel_counts = topNPlusOther(travelSplit.counter, 5, 'อื่นๆ');
+
+  // ---- residence zones ----
+  const residenceSplit = splitMulti(custF.map(c=>c.พักอยู่อาศัยแถวไหน));
+  const residence_counts = {};
+  let otherTotal = 0;
+  Object.entries(residenceSplit.counter).forEach(([k,v])=>{
+    if(PREDEFINED_ZONES.has(k)) residence_counts[k] = v;
+    else otherTotal += v;
+  });
+  if(otherTotal) residence_counts['พื้นที่อื่นๆ (ระบุเอง)'] = otherTotal;
+  const residence_n = residenceSplit.respondents;
+
+  // ---- spend distribution & top spenders ----
+  const spend_bin_counts = {};
+  SPEND_BINS.forEach(b => spend_bin_counts[b.label] = 0);
+  custF.forEach(c=>{
+    const v = c.ยอดซื้อสะสม;
+    for(const b of SPEND_BINS){ if(v < b.max){ spend_bin_counts[b.label]++; break; } }
+  });
+  const top_spenders = [...custF].filter(c=>c.ยอดซื้อสะสม>0)
+    .sort((a,b)=>b.ยอดซื้อสะสม - a.ยอดซื้อสะสม).slice(0,20)
+    .map(c=>({ ชื่อ:c.ชื่อ, สาขา_clean:c.สาขา_clean, ยอดซื้อสะสม:c.ยอดซื้อสะสม, คะแนนคงเหลือ:c.คะแนนคงเหลือ, กลุ่มสมาชิก_clean:c.กลุ่มสมาชิก_clean }));
+
+  // ---- usage-derived aggregates ----
+  const txn_type_counts = {};
+  usageF.forEach(u => { const t = u.ประเภท||'ไม่ระบุ'; txn_type_counts[t] = (txn_type_counts[t]||0)+1; });
+
   const ptsMap = {};
-  usageClean.forEach(u=>{
+  usageF.forEach(u=>{
     if(!u.month) return;
     if(!ptsMap[u.month]) ptsMap[u.month] = {points_earned:0, points_redeemed:0, transactions:0};
     ptsMap[u.month].points_earned += u.เพิ่มคะแนน;
@@ -734,8 +771,7 @@ function processData(custRows, usageRows){
   });
   const pts_trend = Object.entries(ptsMap).sort((a,b)=>a[0]<b[0]?-1:1).map(([month,v])=>({month, ...v}));
 
-  // sales trend (no branch dimension available on these rows)
-  const salesRows = usageClean.filter(u => u.ยอดขาย > 0);
+  const salesRows = usageF.filter(u => u.ยอดขาย > 0);
   const salesMap = {};
   salesRows.forEach(u=>{
     if(!u.month) return;
@@ -748,28 +784,29 @@ function processData(custRows, usageRows){
   const total_sales_txns = salesRows.length;
   const avg_ticket = total_sales_txns ? total_sales/total_sales_txns : 0;
 
-  // promo redemption
   const promoCounter = {};
   const promoRe = /[Rr]edeem [Pp]romotion\s*'([^']+)'/;
-  usageClean.forEach(u=>{
+  usageF.forEach(u=>{
     const m = promoRe.exec(u.คำอธิบาย);
     if(m){ const name = m[1].trim(); promoCounter[name] = (promoCounter[name]||0)+1; }
   });
   const promo_top = Object.entries(promoCounter).sort((a,b)=>b[1]-a[1]).slice(0,15);
 
-  // ---- KPIs ----
-  const total_members = cust.length;
-  const active_members = cust.filter(c => c.recency_bucket==='0-30 วัน' || c.recency_bucket==='31-90 วัน').length;
+  // ---- KPIs (all computed on the filtered subset) ----
+  const total_members = custF.length;
+  const active_members = custF.filter(c => c.recency_bucket==='0-30 วัน' || c.recency_bucket==='31-90 วัน').length;
   const active_rate = total_members ? Math.round(active_members/total_members*1000)/10 : 0;
-  const members_30d = cust.filter(c => c.recency_bucket==='0-30 วัน').length;
-  const total_points_balance = cust.reduce((s,c)=>s+c.คะแนนคงเหลือ,0);
-  const total_points_earned_alltime = cust.reduce((s,c)=>s+c.คะแนนสะสม,0);
+  const members_30d = custF.filter(c => c.recency_bucket==='0-30 วัน').length;
+  const total_points_balance = custF.reduce((s,c)=>s+c.คะแนนคงเหลือ,0);
+  const total_points_earned_alltime = custF.reduce((s,c)=>s+c.คะแนนสะสม,0);
   const avg_points_balance = total_members ? Math.round(total_points_balance/total_members*10)/10 : 0;
   const rub = newsletter_counts['รับ']||0, mairub = newsletter_counts['ไม่รับ']||0;
   const newsletter_opt_in_rate = (rub+mairub) ? Math.round(rub/(rub+mairub)*1000)/10 : 0;
 
   const pad2 = n => String(n).padStart(2,'0');
   const data_snapshot_date = `${NOW.getFullYear()}-${pad2(NOW.getMonth()+1)}-${pad2(NOW.getDate())} ${pad2(NOW.getHours())}:${pad2(NOW.getMinutes())}`;
+  const points_earned_total = pts_trend.reduce((s,p)=>s+p.points_earned,0);
+  const points_redeemed_total = pts_trend.reduce((s,p)=>s+p.points_redeemed,0);
 
   const kpi = {
     total_members, active_members, active_rate, members_30d,
@@ -777,11 +814,12 @@ function processData(custRows, usageRows){
     total_points_earned_alltime: Math.round(total_points_earned_alltime),
     avg_points_balance,
     total_sales: Math.round(total_sales), total_sales_txns, avg_ticket: Math.round(avg_ticket),
+    points_earned_total: Math.round(points_earned_total), points_redeemed_total: Math.round(points_redeemed_total),
     newsletter_opt_in_rate, data_snapshot_date,
-    n_outliers_removed: outliers.length, outlier_names: outlierNames,
+    n_outliers_removed: outlierMeta.n_outliers_removed, outlier_names: outlierMeta.outlier_names,
   };
 
-  // ---- Bangkok map: merge static geo with live zone totals ----
+  // ---- Bangkok map: merge static geo with live (filtered) zone totals ----
   const ZONE_TO_KHETS_KEYS = new Set(BKK_GEO.khets.map(k=>k.zone).filter(Boolean));
   const zone_totals = {};
   ZONE_TO_KHETS_KEYS.forEach(z => zone_totals[z] = residence_counts[z] || 0);
@@ -797,6 +835,7 @@ function processData(custRows, usageRows){
     kpi, branch_counts, tier_counts, gender_counts, age_counts, recency_counts,
     reg_trend, spend_bin_counts, top_spenders, newsletter_counts,
     channel_counts, impression_counts, travel_counts,
+    channel_n: channelSplit.respondents, impression_n: impressionSplit.respondents, travel_n: travelSplit.respondents,
     residence_counts: sortObjDesc(residence_counts), residence_n,
     txn_type_counts, pts_trend, sales_trend, promo_top,
     branch_order: BRANCH_ORDER, bkk_map,
@@ -804,27 +843,139 @@ function processData(custRows, usageRows){
 }
 
 // ===================== RENDERING (unchanged shape from DATA) =====================
-let DATA = null;
 
-function renderKPIs(periodMembers, periodSales, periodSalesTxns, periodPtsEarned, periodPtsRedeemed, mFrom, mTo){
+// ===================== RENDERING (unchanged shape from DATA) =====================
+let RAW = null;   // { cust, usageClean, NOW, n_outliers_removed, outlier_names } — unfiltered, cleaned rows
+let DATA = null;  // aggregates computed from the currently filtered subset of RAW
+
+// ===================== VALUE / % LABEL PLUGIN (no external dependency) =====================
+function asNum(v){
+  if(typeof v === 'number') return isFinite(v) ? v : 0;
+  try{ const n = Number(v); return isFinite(n) ? n : 0; } catch(e){ return 0; }
+}
+const valueLabelsPlugin = {
+  id: 'valueLabels',
+  afterDatasetsDraw(chart){
+    const opts = chart.options.plugins && chart.options.plugins.valueLabels;
+    if(!opts) return;
+    const ctx = chart.ctx;
+    ctx.save();
+    try{
+
+    if(opts.mode === 'share'){
+      const dsIndex = opts.datasetIndex ?? 0;
+      const dataset = chart.data.datasets[dsIndex];
+      const meta = chart.getDatasetMeta(dsIndex);
+      const total = opts.total ?? dataset.data.reduce((a,b)=>a+(b||0),0);
+      const isDonut = chart.config.type === 'doughnut' || chart.config.type === 'pie';
+      const isHoriz = chart.options.indexAxis === 'y';
+      meta.data.forEach((el, i)=>{
+        const value = dataset.data[i];
+        if(!value) return;
+        const pct = total ? Math.round(value/total*100) : 0;
+        const label = `${fmtNum(value)} (${pct}%)`;
+        const pos = el.tooltipPosition ? el.tooltipPosition() : {x:el.x, y:el.y};
+        ctx.font = '600 10px "IBM Plex Sans Thai", sans-serif';
+        if(isDonut){
+          ctx.fillStyle = '#fff';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText(label, pos.x, pos.y);
+        } else if(isHoriz){
+          ctx.fillStyle = COLORS.textStrong;
+          ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+          ctx.fillText(label, pos.x + 6, pos.y);
+        } else {
+          ctx.fillStyle = COLORS.textStrong;
+          ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+          ctx.fillText(label, pos.x, pos.y - 6);
+        }
+      });
+    } else if(opts.mode === 'growth'){
+      const dsIndex = opts.datasetIndex ?? 0;
+      const dataset = chart.data.datasets[dsIndex];
+      const meta = chart.getDatasetMeta(dsIndex);
+      const fmtFn = opts.fmt || fmtNum;
+      ctx.font = '600 10px "IBM Plex Sans Thai", sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      meta.data.forEach((el,i)=>{
+        const value = dataset.data[i];
+        if(value===undefined || value===null) return;
+        const prev = i>0 ? dataset.data[i-1] : null;
+        let g = '';
+        if(prev!==null && prev!==0){
+          const pct = Math.round((value-prev)/Math.abs(prev)*100);
+          g = ` (${pct>=0?'+':''}${pct}%)`;
+        }
+        const pos = el.tooltipPosition ? el.tooltipPosition() : {x:el.x, y:el.y};
+        ctx.fillStyle = COLORS.textStrong;
+        ctx.fillText(`${fmtFn(value)}${g}`, pos.x, pos.y - 6);
+      });
+    } else if(opts.mode === 'stackedTotal'){
+      const labels = chart.data.labels;
+      ctx.font = '600 9.5px "IBM Plex Sans Thai", sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      labels.forEach((_, i)=>{
+        let topY = Infinity, anchorX = null, total = 0;
+        chart.data.datasets.forEach((ds, dsIdx)=>{
+          const m = chart.getDatasetMeta(dsIdx);
+          if(m.hidden) return;
+          total += (ds.data[i]||0);
+          const el = m.data[i];
+          if(el && ds.data[i] && el.y < topY){ topY = el.y; anchorX = el.x; }
+        });
+        if(anchorX===null || total===0) return;
+        const prevTotal = i>0 ? chart.data.datasets.reduce((s,ds)=>s+(ds.data[i-1]||0),0) : null;
+        let g = '';
+        if(prevTotal){
+          const pct = Math.round((total-prevTotal)/Math.abs(prevTotal)*100);
+          g = ` ${pct>=0?'+':''}${pct}%`;
+        }
+        ctx.fillStyle = COLORS.textStrong;
+        ctx.fillText(`${fmtNum(total)}${g}`, anchorX, topY - 6);
+      });
+    } else if(opts.mode === 'value'){
+      const dsIndexes = opts.datasetIndexes || [0];
+      ctx.font = '600 9px "IBM Plex Sans Thai", sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      dsIndexes.forEach(dsIndex=>{
+        const dataset = chart.data.datasets[dsIndex];
+        const meta = chart.getDatasetMeta(dsIndex);
+        meta.data.forEach((el,i)=>{
+          const value = dataset.data[i];
+          if(value===undefined || value===null) return;
+          const pos = el.tooltipPosition ? el.tooltipPosition() : {x:el.x, y:el.y};
+          ctx.fillStyle = dataset.borderColor || COLORS.textStrong;
+          ctx.fillText(fmtNum(value), pos.x, pos.y - 8);
+        });
+      });
+    }
+    } catch(err){ console.warn('valueLabels plugin draw skipped:', err); }
+    ctx.restore();
+  }
+};
+
+// ===================== KPI CARDS (fully filter-reactive) =====================
+function renderKPIs(){
+  const k = DATA.kpi;
   const kpiDefs = [
-    {label:'สมาชิกทั้งหมด (ทุกช่วงเวลา)', value:fmtNum(DATA.kpi.total_members), sub:'Total Members', cls:''},
-    {label:'สมาชิก Active (ใช้งานใน 90 วัน)', value:fmtNum(DATA.kpi.active_members), sub:`${DATA.kpi.active_rate}% ของสมาชิกทั้งหมด`, cls:'jade'},
-    {label:`สมาชิกใหม่ในช่วงที่เลือก`, value:fmtNum(periodMembers), sub:`${mFrom} — ${mTo}`, cls:'gold'},
-    {label:'ยอดขายในช่วงที่เลือก', value:fmtBaht(periodSales), sub:`${fmtNum(periodSalesTxns)} ธุรกรรม`, cls:'indigo'},
-    {label:'แต้มสุทธิในช่วงที่เลือก', value:fmtNum(periodPtsEarned-periodPtsRedeemed), sub:`ได้รับ ${fmtNum(periodPtsEarned)} · ใช้ไป ${fmtNum(periodPtsRedeemed)}`, cls:'maroon'},
-    {label:'ยอดซื้อเฉลี่ยต่อบิล', value:fmtBaht(DATA.kpi.avg_ticket), sub:'Avg Ticket Size (ทุกช่วงเวลา)', cls:'indigo'},
-    {label:'แต้มคงเหลือในระบบ', value:fmtNum(DATA.kpi.total_points_balance), sub:'Outstanding Points Liability', cls:'maroon'},
-    {label:'อัตราการรับข่าวสาร', value:DATA.kpi.newsletter_opt_in_rate+'%', sub:'Newsletter Opt-in Rate', cls:'gold'},
+    {label:'สมาชิกในตัวกรองนี้', value:fmtNum(k.total_members), sub:'Filtered Members', cls:''},
+    {label:'สมาชิก Active (ใช้งานใน 90 วัน)', value:fmtNum(k.active_members), sub:`${k.active_rate}% ของสมาชิกในตัวกรอง`, cls:'jade'},
+    {label:'สมาชิกใหม่ 30 วันล่าสุด', value:fmtNum(k.members_30d), sub:'New Members (30d, in filter)', cls:'gold'},
+    {label:'ยอดขายในตัวกรองนี้', value:fmtBaht(k.total_sales), sub:`${fmtNum(k.total_sales_txns)} ธุรกรรม`, cls:'indigo'},
+    {label:'แต้มสุทธิในตัวกรองนี้', value:fmtNum(k.points_earned_total-k.points_redeemed_total), sub:`ได้รับ ${fmtNum(k.points_earned_total)} · ใช้ไป ${fmtNum(k.points_redeemed_total)}`, cls:'maroon'},
+    {label:'ยอดซื้อเฉลี่ยต่อบิล', value:fmtBaht(k.avg_ticket), sub:'Avg Ticket Size', cls:'indigo'},
+    {label:'แต้มคงเหลือในระบบ', value:fmtNum(k.total_points_balance), sub:'Outstanding Points Liability', cls:'maroon'},
+    {label:'อัตราการรับข่าวสาร', value:k.newsletter_opt_in_rate+'%', sub:'Newsletter Opt-in Rate', cls:'gold'},
   ];
-  document.getElementById('kpiGrid').innerHTML = kpiDefs.map(k => `
-    <div class="kpi ${k.cls}">
-      <div class="kpi-label">${k.label}</div>
-      <div class="kpi-value">${k.value}</div>
-      <div class="kpi-sub">${k.sub}</div>
+  document.getElementById('kpiGrid').innerHTML = kpiDefs.map(d => `
+    <div class="kpi ${d.cls}">
+      <div class="kpi-label">${d.label}</div>
+      <div class="kpi-value">${d.value}</div>
+      <div class="kpi-sub">${d.sub}</div>
     </div>`).join('');
 }
 
+// ===================== FILTER UI =====================
 let branches = [], selectedBranches = new Set();
 const branchChipsEl = document.getElementById('branchChips');
 function renderBranchChips(){
@@ -841,9 +992,24 @@ function renderBranchChips(){
   document.getElementById('chipAll').addEventListener('click', ()=>{ selectedBranches = new Set(branches); renderBranchChips(); updateAll(); });
 }
 
+// ---------- Tab navigation ----------
+document.querySelectorAll('.tabbtn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tabbtn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const target = btn.dataset.page;
+    document.querySelectorAll('.page').forEach(p=>{
+      p.style.display = (p.dataset.page === target) ? '' : 'none';
+    });
+    window.scrollTo({top:0, behavior:'instant'});
+  });
+});
+
 let months = [];
 const monthFromEl = document.getElementById('monthFrom');
 const monthToEl = document.getElementById('monthTo');
+monthFromEl.addEventListener('change', updateAll);
+monthToEl.addEventListener('change', updateAll);
 
 let charts = {};
 let chartLibReady = false;
@@ -864,35 +1030,40 @@ function makeOrUpdate(id, config){
 }
 const legendBottom = { position:'bottom', labels:{ boxWidth:11, padding:12, font:{size:11} } };
 
+// ===================== MASTER UPDATE: filter RAW -> recompute DATA -> redraw everything =====================
 function updateAll(){
+  if(!RAW) return;
   const mFrom = monthFromEl.value, mTo = monthToEl.value;
+  const allBranchesSelected = selectedBranches.size === branches.length;
 
-  // --- Period KPIs driven by the month filter ---
-  const regInRange = DATA.reg_trend.filter(r => r.reg_month >= mFrom && r.reg_month <= mTo && selectedBranches.has(r.สาขา_clean));
-  const periodMembers = regInRange.reduce((s,r)=>s+r.count, 0);
-  const salesInRange = DATA.sales_trend.filter(s => s.month >= mFrom && s.month <= mTo);
-  const periodSales = salesInRange.reduce((s,r)=>s+r.sales, 0);
-  const periodSalesTxns = salesInRange.reduce((s,r)=>s+r.txns, 0);
-  const ptsInRange = DATA.pts_trend.filter(p => p.month >= mFrom && p.month <= mTo);
-  const periodPtsEarned = ptsInRange.reduce((s,r)=>s+r.points_earned, 0);
-  const periodPtsRedeemed = ptsInRange.reduce((s,r)=>s+r.points_redeemed, 0);
-  renderKPIs(periodMembers, periodSales, periodSalesTxns, periodPtsEarned, periodPtsRedeemed, mFrom, mTo);
+  const custF = RAW.cust.filter(c =>
+    c.reg_month && c.reg_month >= mFrom && c.reg_month <= mTo &&
+    (c.สาขา_clean ? selectedBranches.has(c.สาขา_clean) : allBranchesSelected)
+  );
+  const usageF = RAW.usageClean.filter(u =>
+    u.month && u.month >= mFrom && u.month <= mTo &&
+    (allBranchesSelected || (u.สาขา_clean && selectedBranches.has(u.สาขา_clean)))
+  );
+
+  DATA = computeAggregates(custF, usageF, RAW.NOW, { n_outliers_removed: RAW.n_outliers_removed, outlier_names: RAW.outlier_names });
+
+  document.getElementById('snapshotTotal').textContent = fmtNum(DATA.kpi.total_members);
+  renderKPIs();
 
   try{
-  // --- Growth chart (stacked bar by branch, filtered by month range & branch selection) ---
-  const regFiltered = DATA.reg_trend.filter(r => r.reg_month >= mFrom && r.reg_month <= mTo && selectedBranches.has(r.สาขา_clean));
-  const growMonths = [...new Set(regFiltered.map(r=>r.reg_month))].sort();
-  const datasets = branches.filter(b=>selectedBranches.has(b)).map((b,i)=>({
+  // --- Member growth (stacked bar by branch) ---
+  const growMonths = [...new Set(DATA.reg_trend.map(r=>r.reg_month))].sort();
+  const growDatasets = branches.filter(b=>selectedBranches.has(b)).map((b,i)=>({
     label:b,
-    data: growMonths.map(m => { const rec = regFiltered.find(r=>r.reg_month===m && r.สาขา_clean===b); return rec? rec.count : 0; }),
+    data: growMonths.map(m => { const rec = DATA.reg_trend.find(r=>r.reg_month===m && r.สาขา_clean===b); return rec? rec.count : 0; }),
     backgroundColor: PALETTE[i%PALETTE.length],
     stack:'a'
   }));
   makeOrUpdate('chartGrowth', {
     type:'bar',
-    data:{ labels:growMonths, datasets },
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:legendBottom },
+    data:{ labels:growMonths, datasets:growDatasets },
+    options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:18}},
+      plugins:{ legend:legendBottom, valueLabels:{mode:'stackedTotal'} },
       scales:{ x:{stacked:true, grid:{display:false}}, y:{stacked:true, grid:{color:COLORS.grid}} } }
   });
 
@@ -900,16 +1071,18 @@ function updateAll(){
   makeOrUpdate('chartRecency', {
     type:'bar',
     data:{ labels:Object.keys(DATA.recency_counts), datasets:[{ data:Object.values(DATA.recency_counts), backgroundColor:COLORS.jade, borderRadius:4 }] },
-    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, layout:{padding:{right:60}},
+      plugins:{legend:{display:false}, valueLabels:{mode:'share'}},
       scales:{ x:{grid:{color:COLORS.grid}}, y:{grid:{display:false}} } }
   });
 
-  // --- Branch donut (respects branch filter for visual emphasis but shows all counts) ---
+  // --- Branch donut ---
+  const branchLabels = Object.keys(DATA.branch_counts);
   makeOrUpdate('chartBranch', {
     type:'doughnut',
-    data:{ labels:branches, datasets:[{ data:branches.map(b=>DATA.branch_counts[b]||0),
-      backgroundColor: branches.map((b,i)=> selectedBranches.has(b)? PALETTE[i%PALETTE.length] : '#E4DBC7') }] },
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:legendBottom }, cutout:'62%' }
+    data:{ labels:branchLabels, datasets:[{ data:branchLabels.map(b=>DATA.branch_counts[b]),
+      backgroundColor: branchLabels.map((b,i)=>PALETTE[i%PALETTE.length]) }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:legendBottom, valueLabels:{mode:'share'} }, cutout:'62%' }
   });
 
   // --- Tier ---
@@ -917,42 +1090,44 @@ function updateAll(){
   makeOrUpdate('chartTier', {
     type:'bar',
     data:{ labels:tierLabels, datasets:[{ data:tierLabels.map(t=>DATA.tier_counts[t]), backgroundColor:COLORS.gold, borderRadius:4 }] },
-    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, layout:{padding:{right:60}},
+      plugins:{legend:{display:false}, valueLabels:{mode:'share'}},
       scales:{ x:{grid:{color:COLORS.grid}}, y:{grid:{display:false}} } }
   });
 
   // --- Newsletter ---
   makeOrUpdate('chartNewsletter', {
     type:'doughnut',
-    data:{ labels:Object.keys(DATA.newsletter_counts), datasets:[{ data:Object.values(DATA.newsletter_counts), backgroundColor:[COLORS.gold, COLORS.maroon] }] },
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:legendBottom }, cutout:'62%' }
+    data:{ labels:Object.keys(DATA.newsletter_counts), datasets:[{ data:Object.values(DATA.newsletter_counts), backgroundColor:[COLORS.gold, COLORS.maroon, COLORS.indigo] }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:legendBottom, valueLabels:{mode:'share'} }, cutout:'62%' }
   });
 
   // --- Gender ---
   makeOrUpdate('chartGender', {
     type:'doughnut',
     data:{ labels:Object.keys(DATA.gender_counts), datasets:[{ data:Object.values(DATA.gender_counts), backgroundColor:PALETTE }] },
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:legendBottom }, cutout:'62%' }
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:legendBottom, valueLabels:{mode:'share'} }, cutout:'62%' }
   });
 
   // --- Age ---
   makeOrUpdate('chartAge', {
     type:'bar',
     data:{ labels:Object.keys(DATA.age_counts), datasets:[{ data:Object.values(DATA.age_counts), backgroundColor:COLORS.indigo, borderRadius:4 }] },
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+    options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:18}},
+      plugins:{legend:{display:false}, valueLabels:{mode:'share'}},
       scales:{ x:{grid:{display:false}, ticks:{font:{size:10}}}, y:{grid:{color:COLORS.grid}} } }
   });
 
-  // --- Sales trend (month filter only, branch not tracked in this data) ---
-  const salesFiltered = DATA.sales_trend.filter(s=>s.month>=mFrom && s.month<=mTo);
+  // --- Sales trend ---
   makeOrUpdate('chartSales', {
     type:'bar',
-    data:{ labels:salesFiltered.map(s=>s.month),
+    data:{ labels:DATA.sales_trend.map(s=>s.month),
       datasets:[
-        { type:'bar', label:'ยอดขาย (บาท)', data:salesFiltered.map(s=>s.sales), backgroundColor:COLORS.gold, yAxisID:'y', borderRadius:4 },
-        { type:'line', label:'จำนวนธุรกรรม', data:salesFiltered.map(s=>s.txns), borderColor:COLORS.indigo, backgroundColor:COLORS.indigo, yAxisID:'y1', tension:0.35 }
+        { type:'bar', label:'ยอดขาย (บาท)', data:DATA.sales_trend.map(s=>s.sales), backgroundColor:COLORS.gold, yAxisID:'y', borderRadius:4 },
+        { type:'line', label:'จำนวนธุรกรรม', data:DATA.sales_trend.map(s=>s.txns), borderColor:COLORS.indigo, backgroundColor:COLORS.indigo, yAxisID:'y1', tension:0.35 }
       ] },
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:legendBottom },
+    options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:20}},
+      plugins:{ legend:legendBottom, valueLabels:{mode:'growth', datasetIndex:0, fmt:fmtBaht} },
       scales:{
         x:{ grid:{display:false} },
         y:{ position:'left', grid:{color:COLORS.grid}, ticks:{ callback:v=>(v/1000)+'k' } },
@@ -961,57 +1136,61 @@ function updateAll(){
   });
 
   // --- Points trend ---
-  const ptsFiltered = DATA.pts_trend.filter(p=>p.month>=mFrom && p.month<=mTo);
   makeOrUpdate('chartPoints', {
     type:'line',
-    data:{ labels:ptsFiltered.map(p=>p.month), datasets:[
-      { label:'แต้มที่ได้รับ', data:ptsFiltered.map(p=>p.points_earned), borderColor:COLORS.jade, backgroundColor:'rgba(122,155,126,0.15)', fill:true, tension:0.35 },
-      { label:'แต้มที่ใช้ไป', data:ptsFiltered.map(p=>p.points_redeemed), borderColor:COLORS.maroon, backgroundColor:'rgba(194,86,75,0.12)', fill:true, tension:0.35 }
+    data:{ labels:DATA.pts_trend.map(p=>p.month), datasets:[
+      { label:'แต้มที่ได้รับ', data:DATA.pts_trend.map(p=>p.points_earned), borderColor:COLORS.jade, backgroundColor:'rgba(122,155,126,0.15)', fill:true, tension:0.35 },
+      { label:'แต้มที่ใช้ไป', data:DATA.pts_trend.map(p=>p.points_redeemed), borderColor:COLORS.maroon, backgroundColor:'rgba(194,86,75,0.12)', fill:true, tension:0.35 }
     ] },
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:legendBottom },
+    options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:16}},
+      plugins:{ legend:legendBottom, valueLabels:{mode:'value', datasetIndexes:[0,1]} },
       scales:{ x:{grid:{display:false}}, y:{grid:{color:COLORS.grid}} } }
   });
-  } catch(err){ console.error('Chart rendering failed (Chart.js may be blocked):', err); }
-}
 
-function renderStaticCharts(){
-  try{
+  // --- Transaction type ---
   makeOrUpdate('chartTxnType', {
     type:'doughnut',
     data:{ labels:Object.keys(DATA.txn_type_counts), datasets:[{ data:Object.values(DATA.txn_type_counts), backgroundColor:PALETTE }] },
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:legendBottom }, cutout:'58%' }
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:legendBottom, valueLabels:{mode:'share'} }, cutout:'58%' }
   });
 
+  // --- Promotions ---
   const promoLabels = DATA.promo_top.map(p=>p[0]);
   makeOrUpdate('chartPromo', {
     type:'bar',
     data:{ labels:promoLabels, datasets:[{ data:DATA.promo_top.map(p=>p[1]), backgroundColor:COLORS.gold, borderRadius:4 }] },
-    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, layout:{padding:{right:90}},
+      plugins:{legend:{display:false}, valueLabels:{mode:'share', total:DATA.kpi.total_members}},
       scales:{ x:{grid:{color:COLORS.grid}}, y:{grid:{display:false}} } }
   });
 
-  function horizBar(id, obj, color){
+  // --- Channel / Impression / Travel (multi-select: % of respondents, not of dataset sum) ---
+  function horizBar(id, obj, color, total){
     const labels = Object.keys(obj);
     makeOrUpdate(id, {
       type:'bar',
       data:{ labels, datasets:[{ data:labels.map(l=>obj[l]), backgroundColor:color, borderRadius:4 }] },
-      options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, layout:{padding:{right:70}},
+        plugins:{legend:{display:false}, valueLabels:{mode:'share', total}},
         scales:{ x:{grid:{color:COLORS.grid}}, y:{grid:{display:false}, ticks:{font:{size:10.5}}} } }
     });
   }
-  horizBar('chartChannel', DATA.channel_counts, COLORS.indigo);
-  horizBar('chartImpression', DATA.impression_counts, COLORS.jade);
-  horizBar('chartTravel', DATA.travel_counts, COLORS.maroon);
+  horizBar('chartChannel', DATA.channel_counts, COLORS.indigo, DATA.channel_n);
+  horizBar('chartImpression', DATA.impression_counts, COLORS.jade, DATA.impression_n);
+  horizBar('chartTravel', DATA.travel_counts, COLORS.maroon, DATA.travel_n);
 
+  // --- Spend distribution ---
   const spendLabels = Object.keys(DATA.spend_bin_counts);
   makeOrUpdate('chartSpendBin', {
     type:'bar',
     data:{ labels:spendLabels, datasets:[{ data:spendLabels.map(l=>DATA.spend_bin_counts[l]), backgroundColor:COLORS.gold, borderRadius:4 }] },
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+    options:{ responsive:true, maintainAspectRatio:false, layout:{padding:{top:18}},
+      plugins:{legend:{display:false}, valueLabels:{mode:'share'}},
       scales:{ x:{grid:{display:false}, ticks:{font:{size:9.5}}}, y:{grid:{color:COLORS.grid}} } }
   });
   } catch(err){ console.error('Chart rendering failed (Chart.js may be blocked):', err); }
 
+  // --- Top spenders table ---
   const tbody = document.querySelector('#topSpendersTable tbody');
   tbody.innerHTML = DATA.top_spenders.map((s,i)=>`
     <tr>
@@ -1023,21 +1202,24 @@ function renderStaticCharts(){
     </tr>`).join('');
 
   document.getElementById('avgValueBoxes').innerHTML = `
-    <div class="note-box"><b style="color:var(--ink);">${fmtBaht(DATA.kpi.avg_ticket)}</b> — ยอดซื้อเฉลี่ยต่อบิล (จากธุรกรรม add-by-phone ${fmtNum(DATA.kpi.total_sales_txns)} รายการ)</div>
-    <div class="note-box"><b style="color:var(--ink);">${fmtNum(DATA.kpi.avg_points_balance)}</b> — แต้มคงเหลือเฉลี่ยต่อสมาชิก 1 คน</div>
-    <div class="note-box"><b style="color:var(--ink);">${fmtNum(DATA.kpi.total_points_earned_alltime)}</b> — แต้มสะสมรวมที่เคยได้รับตลอดอายุสมาชิก (คะแนนสะสม)</div>
+    <div class="note-box"><b style="color:var(--ink);">${fmtBaht(DATA.kpi.avg_ticket)}</b> — ยอดซื้อเฉลี่ยต่อบิล (จากธุรกรรม add-by-phone ${fmtNum(DATA.kpi.total_sales_txns)} รายการ ในตัวกรองนี้)</div>
+    <div class="note-box"><b style="color:var(--ink);">${fmtNum(DATA.kpi.avg_points_balance)}</b> — แต้มคงเหลือเฉลี่ยต่อสมาชิก 1 คน (ในตัวกรองนี้)</div>
+    <div class="note-box"><b style="color:var(--ink);">${fmtNum(DATA.kpi.total_points_earned_alltime)}</b> — แต้มสะสมรวมที่เคยได้รับตลอดอายุสมาชิก (คะแนนสะสม, ในตัวกรองนี้)</div>
   `;
 
   document.getElementById('cleaningNotes').innerHTML = `
     <li>ข้อมูลนี้ดึงสดจาก Google Sheets โดยตรง (2 ชีท: รายงานข้อมูลลูกค้า และ รายงานการใช้งาน) ทุกครั้งที่เปิดหน้านี้ และรีเฟรชอัตโนมัติทุก 5 นาที</li>
-    <li>ลบธุรกรรมที่มีค่าผิดปกติ (แต้มเพิ่ม/ลด สูงเกิน 5,000 แต้มต่อครั้ง ซึ่งผิดธรรมชาติของโปรแกรมสะสมแต้มปกติ) จำนวน ${DATA.kpi.n_outliers_removed} รายการ${DATA.kpi.outlier_names.length? ` จากบัญชี "${DATA.kpi.outlier_names.join(', ')}"`:''} ก่อนคำนวณกราฟแต้มและยอดขาย</li>
-    <li>รวมคำตอบข้อความอิสระที่สะกดต่างกันแต่ความหมายเดียวกันในหัวข้อ "รู้จักร้านจากช่องทางไหน" / "เดินทางมาร้านด้วยวิธีไหน" (เช่น IG / Ig, Google map / กูเกิ้ลแมพ) และจัดกลุ่มคำตอบปลีกย่อยที่พบน้อยไว้ในหมวด "อื่นๆ" เพื่อให้อ่านกราฟง่ายขึ้น</li>
-    <li>เขตที่พักอาศัยที่เป็นข้อความอิสระ (ที่อยู่เฉพาะ, พิมพ์ผิด, ชื่อซอย ฯลฯ) ถูกจัดรวมเป็น "พื้นที่อื่นๆ (ระบุเอง)" แยกจาก 11 โซนหลักที่เป็นตัวเลือกมาตรฐาน</li>
-    <li>ช่วงอายุที่ผิดพลาดจากข้อมูลต้นทาง (เช่น "115-119" ปี) ถูกคัดออกจากกราฟช่วงอายุ เนื่องจากเป็นข้อมูลวันเกิดที่กรอกผิด</li>
-    <li>สถานะ "recency" (ความล่าสุดในการใช้งาน) คำนวณจากวันที่ใช้งานล่าสุดเทียบกับวันที่ล่าสุดที่พบในข้อมูล (${DATA.kpi.data_snapshot_date})</li>
-    <li>ยอดขายและแต้มที่ได้รับ/ใช้ไป อ้างอิงจากธุรกรรมในระบบ CRM (LINE OA) เท่านั้น ไม่ใช่ยอดขายจากระบบ POS ทั้งหมดของร้าน และไม่มีการบันทึกสาขาในธุรกรรมประเภท "แลกแต้มด้วยเบอร์โทร" (add-by-phone) จึงไม่สามารถแยกยอดขาย/แต้มตามสาขาได้ในชุดข้อมูลนี้</li>
-    <li>แผนที่ทำเลที่พักอาศัยอ้างอิงขอบเขตเขตการปกครองของกรุงเทพมหานคร (50 เขต) จาก OpenGISData-Thailand โซนในแบบสอบถามที่รวมหลายเขต (เช่น "บางนา สวนหลวง ลาดกระบัง") จะถูกไล่สีเท่ากันทุกเขตในกลุ่มนั้น เนื่องจากข้อมูลต้นฉบับไม่ได้แยกจำนวนสมาชิกเป็นรายเขต</li>
+    <li>ทุกการ์ด/กราฟในหน้านี้กรองตามสาขาและช่วงเดือนที่เลือกด้านบน — ตัวเลข "สัดส่วน %" คำนวณจากฐานของกลุ่มที่กรองแล้ว ไม่ใช่ฐานสมาชิกทั้งหมด</li>
+    <li>ลบธุรกรรมที่มีค่าผิดปกติ (แต้มเพิ่ม/ลด สูงเกิน 5,000 แต้มต่อครั้ง) จำนวน ${DATA.kpi.n_outliers_removed} รายการ${DATA.kpi.outlier_names.length? ` จากบัญชี "${DATA.kpi.outlier_names.join(', ')}"`:''} ออกจากทั้งชุดข้อมูลก่อนกรองตามฟิลเตอร์ (เป็นการทำความสะอาดข้อมูล ไม่ใช่ตัวกรอง)</li>
+    <li>รวมคำตอบข้อความอิสระที่สะกดต่างกันแต่ความหมายเดียวกันในหัวข้อ "รู้จักร้านจากช่องทางไหน" / "เดินทางมาร้านด้วยวิธีไหน" และจัดกลุ่มคำตอบปลีกย่อยที่พบน้อยไว้ในหมวด "อื่นๆ"</li>
+    <li>เขตที่พักอาศัยที่เป็นข้อความอิสระถูกจัดรวมเป็น "พื้นที่อื่นๆ (ระบุเอง)" แยกจาก 11 โซนหลัก</li>
+    <li>ช่วงอายุที่ผิดพลาดจากข้อมูลต้นทาง (เช่น "115-119" ปี) ถูกคัดออกจากกราฟช่วงอายุ</li>
+    <li>สถานะ "recency" คำนวณจากวันที่ใช้งานล่าสุดเทียบกับวันที่ล่าสุดที่พบในข้อมูลทั้งหมด (${DATA.kpi.data_snapshot_date}) — ค่านี้คงที่ ไม่เปลี่ยนตามฟิลเตอร์เดือน</li>
+    <li>การกรองสาขาสำหรับยอดขาย/แต้ม จะนับเฉพาะธุรกรรมที่มีการบันทึกสาขาไว้ (ธุรกรรมประเภท "แลกแต้มด้วยเบอร์โทร" ส่วนใหญ่ไม่มีสาขากำกับ จึงถูกนับเฉพาะเมื่อเลือก "ทั้งหมด")</li>
+    <li>แผนที่ทำเลที่พักอาศัยอ้างอิงขอบเขตเขตการปกครองของกรุงเทพมหานคร (50 เขต) จาก OpenGISData-Thailand โซนที่รวมหลายเขตจะถูกไล่สีเท่ากันทุกเขตในกลุ่มนั้น</li>
   `;
+
+  renderBkkMap();
 }
 
 function renderBkkMap(){
@@ -1102,37 +1284,11 @@ function renderBkkMap(){
       <td><span class="rank">${i+1}</span></td>
       <td>${offMapLabels[name] || name}</td>
       <td class="num">${fmtNum(count)}</td>
-      <td class="num">${(count/resTotalRespondents*100).toFixed(1)}%</td>
+      <td class="num">${resTotalRespondents ? (count/resTotalRespondents*100).toFixed(1) : '0.0'}%</td>
     </tr>`).join('');
 }
 
-function renderAll(){
-  branches = BRANCH_ORDER.filter(b => DATA.branch_counts[b] !== undefined);
-  if(!selectedBranches.size) selectedBranches = new Set(branches);
-  renderBranchChips();
-
-  months = [...new Set([
-    ...DATA.reg_trend.map(r=>r.reg_month),
-    ...DATA.sales_trend.map(s=>s.month),
-    ...DATA.pts_trend.map(p=>p.month)
-  ])].filter(Boolean).sort();
-  const prevFrom = monthFromEl.value, prevTo = monthToEl.value;
-  monthFromEl.innerHTML = months.map(m=>`<option value="${m}">${m}</option>`).join('');
-  monthToEl.innerHTML = months.map(m=>`<option value="${m}">${m}</option>`).join('');
-  monthFromEl.value = months.includes(prevFrom) ? prevFrom : months[0];
-  monthToEl.value = months.includes(prevTo) ? prevTo : months[months.length-1];
-
-  document.getElementById('snapshotTotal').textContent = fmtNum(DATA.kpi.total_members);
-
-  updateAll();
-  renderBkkMap();
-  renderStaticCharts();
-}
-
 // ===================== INIT / LIVE REFRESH =====================
-monthFromEl.addEventListener('change', updateAll);
-monthToEl.addEventListener('change', updateAll);
-
 const liveStatusEl = document.getElementById('liveStatus');
 const liveDiagEl = document.getElementById('liveDiag');
 const errorBannerEl = document.getElementById('errorBanner');
@@ -1162,8 +1318,26 @@ function loadData(isManual){
     if(custRows.length === 0 || usageRows.length === 0){
       throw new Error('ดึงข้อมูลได้แต่ไม่มีแถวข้อมูลเลย (0 แถว) — ตรวจสอบว่าลิงก์ gid ของแต่ละแท็บถูกต้อง หรือชีทมีการเปลี่ยนโครงสร้าง');
     }
-    DATA = processData(custRows, usageRows);
-    renderAll();
+    RAW = parseRawData(custRows, usageRows);
+
+    // filter chip / month-range options always reflect the FULL unfiltered dataset
+    const allBranchSet = {};
+    RAW.cust.forEach(c => { if(c.สาขา_clean) allBranchSet[c.สาขา_clean] = true; });
+    branches = BRANCH_ORDER.filter(b => allBranchSet[b]);
+    if(!selectedBranches.size) selectedBranches = new Set(branches);
+    renderBranchChips();
+
+    months = [...new Set([
+      ...RAW.cust.map(c=>c.reg_month),
+      ...RAW.usageClean.map(u=>u.month)
+    ])].filter(Boolean).sort();
+    const prevFrom = monthFromEl.value, prevTo = monthToEl.value;
+    monthFromEl.innerHTML = months.map(m=>`<option value="${m}">${m}</option>`).join('');
+    monthToEl.innerHTML = months.map(m=>`<option value="${m}">${m}</option>`).join('');
+    monthFromEl.value = months.includes(prevFrom) ? prevFrom : months[0];
+    monthToEl.value = months.includes(prevTo) ? prevTo : months[months.length-1];
+
+    updateAll();
     hideError();
     if(!chartLibReady){
       showError('โหลดข้อมูลสำเร็จ แต่ไลบรารีกราฟ (Chart.js) โหลดไม่สำเร็จ กราฟจะไม่แสดง — ตาราง, KPI, และแผนที่ยังใช้งานได้ปกติ ลองรีเฟรชหน้าเว็บอีกครั้ง');
@@ -1184,7 +1358,6 @@ function loadData(isManual){
 refreshBtn.addEventListener('click', ()=>loadData(true));
 
 // Load Chart.js + PapaParse (with CDN fallback) before doing anything else.
-// PapaParse is required to parse the sheets; Chart.js failure degrades gracefully (charts hidden, rest still works).
 setStatus('🔄 กำลังโหลดไลบรารีที่จำเป็น...');
 loadLibrary(CHART_URLS).then(()=>{
   chartLibReady = true;
@@ -1192,7 +1365,9 @@ loadLibrary(CHART_URLS).then(()=>{
     Chart.defaults.font.family = "'IBM Plex Sans Thai', sans-serif";
     Chart.defaults.color = COLORS.text;
     Chart.defaults.borderColor = COLORS.grid;
+    Chart.register(valueLabelsPlugin);
   }
+  if(RAW) updateAll(); // library arrived after data was already loaded — redraw with charts now available
 }).catch(()=>{ console.error('Chart.js failed to load from all CDN sources'); });
 
 loadLibrary(PAPA_URLS).then(()=>{

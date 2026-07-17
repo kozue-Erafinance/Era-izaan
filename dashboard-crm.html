@@ -233,6 +233,10 @@
     background:var(--panel-alt); border:1px dashed var(--panel-line); border-radius:10px;
     padding:16px; font-size:12.5px; color:var(--ink-faint); line-height:1.7; margin-top:8px;
   }
+  .branch-warning{
+    background:#FBF3E1; border:1px solid #E3C387; color:#8A5A1E; border-radius:10px;
+    padding:12px 18px; font-size:12.5px; line-height:1.7; margin-bottom:24px;
+  }
 </style>
 </head>
 <body>
@@ -269,7 +273,11 @@
       <span style="color:var(--ink-faint);font-size:12px;">ถึง</span>
       <select id="monthTo" class="msel"></select>
     </div>
-    <div class="filternote">ตัวกรองสาขา/เดือนมีผลกับทุกการ์ดในหน้านี้ — สำหรับยอดขายและแต้ม การกรองสาขาจะนับเฉพาะธุรกรรมที่มีการบันทึกสาขาไว้เท่านั้น (ธุรกรรมประเภท "แลกแต้มด้วยเบอร์โทร" ส่วนใหญ่ไม่มีสาขากำกับ จึงถูกนับเฉพาะตอนเลือก "ทั้งหมด")</div>
+    <div class="filternote">ตัวกรองสาขา/เดือนมีผลกับทุกการ์ดในหน้านี้ — เลือกได้ทีละ 1 สาขา หรือ "ทั้งหมด"</div>
+  </div>
+
+  <div id="branchDataWarning" class="branch-warning" style="display:none;">
+    ⚠️ ธุรกรรมการซื้อจริง (ประเภท "แลกแต้มด้วยเบอร์โทร") ในไฟล์ต้นทางไม่ได้บันทึกสาขากำกับไว้เลย มีเพียงธุรกรรม "สมัครสมาชิก" เท่านั้นที่มีสาขา — เมื่อเลือกดูรายสาขา การ์ดที่อิงกับยอดซื้อ/ความถี่การซื้อ (ยอดขาย, AOV, CLV, Purchase Frequency, New vs Returning, RFM, Customer Journey, Visit Time, Points, Coupon) จะแสดงเป็น 0 หรือว่างเปล่าทั้งหมด เพราะระบบไม่สามารถอ้างอิงได้ว่าธุรกรรมนั้นเกิดที่สาขาไหน — นี่คือช่องว่างของข้อมูลต้นทาง ไม่ใช่ข้อผิดพลาดของแดชบอร์ด กรุณาเลือก "ทั้งหมด" เพื่อดูข้อมูลยอดขาย/พฤติกรรมการซื้อ
   </div>
 
   <div class="tabnav">
@@ -289,12 +297,19 @@
       <h2 class="section-title">ภาพรวมลูกค้า</h2>
       <span class="section-desc">Customer Overview</span>
     </div>
-    <div class="card" style="margin-bottom:16px;">
-      <h3>สรุปภาพรวม</h3>
-      <p class="cardnote">Executive Summary — สรุปอัตโนมัติจากข้อมูลในตัวกรองที่เลือก</p>
-      <ul id="execSummary" class="exec-summary"></ul>
+    <div class="grid" style="grid-template-columns:1.6fr 1fr; gap:16px; margin-bottom:16px;">
+      <div class="card">
+        <h3>สรุปภาพรวม</h3>
+        <p class="cardnote">Executive Summary — สรุปอัตโนมัติจากข้อมูลในตัวกรองที่เลือก</p>
+        <ul id="execSummary" class="exec-summary"></ul>
+      </div>
+      <div class="card">
+        <h3>สัดส่วนลูกค้าตามสาขา</h3>
+        <p class="cardnote">Customer Distribution by Branch</p>
+        <canvas id="chartBranch"></canvas>
+      </div>
     </div>
-    <div class="grid grid-2" style="margin-bottom:16px;">
+    <div class="grid" style="grid-template-columns:1.7fr 1fr; gap:16px; margin-bottom:16px;">
       <div class="card tall">
         <h3>การเติบโตของฐานสมาชิก</h3>
         <p class="cardnote">Customer Growth — จำนวนสมาชิกใหม่รายเดือน แยกตามสาขา</p>
@@ -306,7 +321,7 @@
         <canvas id="chartNewVsReturning"></canvas>
       </div>
     </div>
-    <div class="grid grid-2" style="margin-bottom:16px;">
+    <div class="grid" style="grid-template-columns:1fr 1.6fr; gap:16px; margin-bottom:16px;">
       <div class="card">
         <h3>ลูกค้าที่ใช้งานอยู่ vs ไม่ได้ใช้งาน</h3>
         <p class="cardnote">Active vs Inactive Customers</p>
@@ -318,7 +333,7 @@
         <canvas id="chartRecency"></canvas>
       </div>
     </div>
-    <div class="grid grid-2" style="margin-bottom:16px;">
+    <div class="grid" style="grid-template-columns:1fr 2fr; gap:16px; margin-bottom:16px;">
       <div class="card">
         <h3>เพศ</h3>
         <p class="cardnote">Customer Demographics — Gender</p>
@@ -330,25 +345,10 @@
         <canvas id="chartAge"></canvas>
       </div>
     </div>
-    <div class="grid grid-2" style="margin-bottom:16px;">
-      <div class="card">
-        <h3>สัดส่วนลูกค้าตามสาขา</h3>
-        <p class="cardnote">Customer Distribution by Branch</p>
-        <canvas id="chartBranch"></canvas>
-      </div>
-      <div class="card">
-        <h3>Top 10 ทำเลที่พักอาศัยของสมาชิก</h3>
-        <p class="cardnote">Customer Distribution by Zone (ตอบได้มากกว่า 1)</p>
-        <table class="data-table" id="top10ResidenceTable">
-          <thead><tr><th>#</th><th>พื้นที่ / โซน</th><th style="text-align:right">จำนวน</th><th style="text-align:right">%</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
-    </div>
-    <div class="grid" style="grid-template-columns:2.1fr 1fr; gap:16px;">
+    <div class="grid" style="grid-template-columns:2.1fr 1fr; gap:16px; margin-bottom:16px;">
       <div class="card">
         <h3>แผนที่เขตกรุงเทพมหานคร</h3>
-        <p class="cardnote">Member Residence Heatmap by Bangkok Khet (ไล่สีตามจำนวนสมาชิกในโซนนั้น)</p>
+        <p class="cardnote">Customer Distribution by Zone — Member Residence Heatmap by Bangkok Khet</p>
         <div class="map-wrap">
           <svg id="bkkMap" viewBox="0 0 760 760" style="width:100%; height:auto; max-height:480px;"></svg>
           <div id="mapTooltip" class="map-tooltip"></div>
@@ -360,6 +360,16 @@
         <p class="cardnote">Outside the 50 Bangkok Khets</p>
         <div id="offMapList" style="display:flex; flex-direction:column; gap:10px; margin-top:6px;"></div>
         <p class="cardnote" style="margin-top:14px;">เขตที่ไม่มีสีบนแผนที่ไม่ได้อยู่ในตัวเลือกโซนมาตรฐานของแบบสอบถาม จึงไม่มีข้อมูลจำนวนสมาชิกแยกเฉพาะเขต</p>
+      </div>
+    </div>
+    <div class="grid" style="grid-template-columns:1fr; margin-bottom:16px;">
+      <div class="card">
+        <h3>Top 10 ทำเลที่พักอาศัยของสมาชิก</h3>
+        <p class="cardnote">Top 10 Residence Zones (ตอบได้มากกว่า 1)</p>
+        <table class="data-table" id="top10ResidenceTable">
+          <thead><tr><th>#</th><th>พื้นที่ / โซน</th><th style="text-align:right">จำนวน</th><th style="text-align:right">%</th></tr></thead>
+          <tbody></tbody>
+        </table>
       </div>
     </div>
   </section>
@@ -1190,13 +1200,12 @@ function renderExecSummary(){
 let branches = [], selectedBranches = new Set();
 const branchChipsEl = document.getElementById('branchChips');
 function renderBranchChips(){
-  branchChipsEl.innerHTML = branches.map(b => `<span class="chip ${selectedBranches.has(b)?'active':''}" data-branch="${b}" style="margin-right:6px;">${b}</span>`).join('')
-    + `<span class="chip" id="chipAll" style="margin-right:6px;">ทั้งหมด</span>`;
+  const allSelected = selectedBranches.size === branches.length;
+  branchChipsEl.innerHTML = `<span class="chip ${allSelected?'active':''}" id="chipAll" style="margin-right:6px;">ทั้งหมด</span>`
+    + branches.map(b => `<span class="chip ${(!allSelected && selectedBranches.has(b))?'active':''}" data-branch="${b}" style="margin-right:6px;">${b}</span>`).join('');
   branchChipsEl.querySelectorAll('.chip[data-branch]').forEach(el=>{
     el.addEventListener('click', ()=>{
-      const b = el.dataset.branch;
-      if(selectedBranches.has(b)){ selectedBranches.delete(b); } else { selectedBranches.add(b); }
-      if(selectedBranches.size===0) selectedBranches = new Set(branches);
+      selectedBranches = new Set([el.dataset.branch]); // single-select only
       renderBranchChips(); updateAll();
     });
   });
@@ -1255,6 +1264,8 @@ function updateAll(){
     u.month && u.month >= mFrom && u.month <= mTo &&
     (allBranchesSelected || (u.สาขา_clean && selectedBranches.has(u.สาขา_clean)))
   );
+
+  document.getElementById('branchDataWarning').style.display = allBranchesSelected ? 'none' : 'block';
 
   DATA = computeAggregates(custF, usageF, RAW.NOW, { n_outliers_removed: RAW.n_outliers_removed, outlier_names: RAW.outlier_names });
 

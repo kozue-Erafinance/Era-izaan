@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light only">
+<meta name="theme-color" content="#FBF8F1">
+<title>อีหล่า อีสานกายะ · CRM Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  :root{
+    color-scheme: light only;
+    --void:#FBF8F1;
+    --panel:#FFFFFF;
+    --panel-alt:#F3EEE1;
+    --panel-line:#E4DBC7;
+    --ink:#2B241C;
+    --ink-muted:#6B5F4E;
+    --ink-faint:#96876F;
+    --gold:#C2872A;
+    --gold-dim:#A9761D;
+    --gold-pale:#F0DFB8;
+    --jade:#4C7A57;
+    --maroon:#A6402F;
+    --indigo:#385D82;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 1200px 600px at 15% -10%, rgba(224,166,58,0.08), transparent 60%),
+      radial-gradient(ellipse 900px 500px at 100% 0%, rgba(110,143,176,0.07), transparent 55%),
+      var(--void);
+    color:var(--ink);
+    font-family:'IBM Plex Sans Thai', sans-serif;
+    font-weight:400;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mudmee{
+    height:10px;
+    width:100%;
+    background-image: repeating-linear-gradient(135deg, var(--gold) 0 3px, transparent 3px 16px),
+                       repeating-linear-gradient(45deg, var(--maroon) 0 3px, transparent 3px 16px);
+    background-size:22px 10px, 22px 10px;
+    background-position: 0 0, 11px 0;
+    opacity:0.55;
+  }
+  header.top{
+    position:sticky; top:0; z-index:50;
+    background:rgba(251,248,241,0.92);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--panel-line);
+  }
+  .top-inner{
+    max-width:1320px; margin:0 auto; padding:20px 28px 16px;
+    display:flex; justify-content:space-between; align-items:flex-end; gap:24px; flex-wrap:wrap;
+  }
+  .brand-eyebrow{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:0.18em;
+    color:var(--gold); text-transform:uppercase; margin:0 0 6px;
+  }
+  h1.brand{
+    font-family:'Fraunces', serif; font-weight:600; font-size:34px; margin:0;
+    letter-spacing:-0.01em; color:var(--ink);
+  }
+  h1.brand em{ color:var(--gold); font-style:normal; }
+  .brand-sub{ color:var(--ink-muted); font-size:13.5px; margin:6px 0 0; }
+  .snapshot{
+    text-align:right; font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--ink-faint);
+  }
+  .snapshot b{ color:var(--ink-muted); font-weight:500; }
+  #liveStatus{ margin-bottom:4px; }
+  .refresh-btn{
+    margin-top:8px; padding:5px 12px; border-radius:7px; border:1px solid var(--panel-line);
+    background:var(--panel-alt); color:var(--ink-muted); font-size:11px; cursor:pointer;
+    font-family:'IBM Plex Sans Thai',sans-serif;
+  }
+  .refresh-btn:hover{ border-color:var(--gold); color:var(--ink); }
+  .refresh-btn:disabled{ opacity:0.5; cursor:default; }
+  .error-banner{
+    max-width:1320px; margin:0 auto; padding:14px 20px; background:#FBEAE6; border:1px solid #E3A99C;
+    color:#8A3527; border-radius:10px; font-size:13px; margin-top:16px;
+  }
+
+  main{ max-width:1320px; margin:0 auto; padding:28px 28px 80px; }
+
+  /* Filters */
+  .filterbar{
+    display:flex; gap:28px; flex-wrap:wrap; align-items:center;
+    background:var(--panel); border:1px solid var(--panel-line); border-radius:var(--radius);
+    padding:16px 20px; margin-bottom:26px;
+    box-shadow:0 1px 3px rgba(43,36,28,0.05), 0 8px 20px -12px rgba(43,36,28,0.10);
+  }
+  .filtergroup{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .filterlabel{
+    font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:0.1em;
+    color:var(--ink-faint); text-transform:uppercase; margin-right:4px;
+  }
+  .chip{
+    padding:6px 13px; border-radius:999px; border:1px solid var(--panel-line);
+    background:var(--panel-alt); color:var(--ink-muted); font-size:12.5px; cursor:pointer;
+    transition:all .15s ease; user-select:none;
+  }
+  .chip:hover{ border-color:var(--gold-dim); color:var(--ink); }
+  .chip.active{ background:var(--gold); border-color:var(--gold); color:#241A08; font-weight:600; }
+  select.msel{
+    background:var(--panel-alt); color:var(--ink); border:1px solid var(--panel-line);
+    border-radius:8px; padding:6px 10px; font-family:'IBM Plex Sans Thai',sans-serif; font-size:12.5px;
+  }
+  .filternote{ font-size:11.5px; color:var(--ink-faint); margin-left:auto; }
+
+  /* KPI grid */
+  .kpi-grid{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(158px,1fr)); gap:12px; margin-bottom:34px;
+  }
+  .kpi{
+    background:var(--panel); border:1px solid var(--panel-line); border-radius:var(--radius);
+    padding:16px 16px 14px; position:relative; overflow:hidden;
+    box-shadow:0 1px 3px rgba(43,36,28,0.05), 0 8px 20px -12px rgba(43,36,28,0.10);
+  }
+  .kpi::before{
+    content:""; position:absolute; top:0; left:0; width:3px; height:100%; background:var(--gold);
+  }
+  .kpi.jade::before{ background:var(--jade); }
+  .kpi.indigo::before{ background:var(--indigo); }
+  .kpi.maroon::before{ background:var(--maroon); }
+  .kpi-label{ font-size:11px; color:var(--ink-faint); margin-bottom:8px; letter-spacing:0.02em;}
+  .kpi-value{ font-family:'Fraunces',serif; font-size:26px; font-weight:600; color:var(--ink); line-height:1.1;}
+  .kpi-value small{ font-size:13px; color:var(--ink-muted); font-weight:400; }
+  .kpi-sub{ font-size:11px; color:var(--ink-faint); margin-top:5px; font-family:'IBM Plex Mono',monospace;}
+
+  /* Section */
+  section{ margin-bottom:40px; }
+  .section-head{ display:flex; align-items:baseline; gap:12px; margin-bottom:16px; }
+  .section-num{ font-family:'IBM Plex Mono',monospace; color:var(--gold-dim); font-size:13px; }
+  h2.section-title{
+    font-family:'Fraunces',serif; font-size:21px; font-weight:600; margin:0; color:var(--ink);
+  }
+  .section-desc{ color:var(--ink-faint); font-size:12.5px; margin:2px 0 0 auto; }
+
+  .grid{ display:grid; gap:16px; }
+  .grid-2{ grid-template-columns:2fr 1fr; }
+  .grid-3{ grid-template-columns:repeat(3,1fr); }
+  .grid-4{ grid-template-columns:repeat(4,1fr); }
+  @media(max-width:900px){ .grid-2,.grid-3,.grid-4{ grid-template-columns:1fr; } }
+
+  .card{
+    background:var(--panel); border:1px solid var(--panel-line); border-radius:var(--radius);
+    padding:18px 18px 12px; box-shadow:0 1px 3px rgba(43,36,28,0.05), 0 8px 20px -12px rgba(43,36,28,0.10);
+  }
+  .card h3{
+    font-size:13.5px; font-weight:600; margin:0 0 3px; color:var(--ink);
+  }
+  .card .cardnote{ font-size:11px; color:var(--ink-faint); margin:0 0 12px; }
+  .card canvas{ max-height:280px; }
+  .card.tall canvas{ max-height:340px; }
+
+  table.data-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  table.data-table th{
+    text-align:left; color:var(--ink-faint); font-weight:500; font-size:10.5px; letter-spacing:0.05em;
+    text-transform:uppercase; padding:8px 8px; border-bottom:1px solid var(--panel-line);
+    font-family:'IBM Plex Mono',monospace;
+  }
+  table.data-table td{ padding:8px 8px; border-bottom:1px solid rgba(58,47,39,0.5); color:var(--ink-muted); }
+  table.data-table tr:hover td{ color:var(--ink); background:rgba(224,166,58,0.04); }
+  table.data-table td.num{ font-family:'IBM Plex Mono',monospace; text-align:right; color:var(--ink); }
+  .rank{ display:inline-block; width:20px; color:var(--gold); font-family:'IBM Plex Mono',monospace; }
+
+  .tag{
+    display:inline-block; padding:2px 8px; border-radius:6px; font-size:10.5px;
+    background:var(--panel-alt); color:var(--ink-muted); border:1px solid var(--panel-line);
+  }
+
+  footer{
+    max-width:1320px; margin:0 auto; padding:0 28px 60px; color:var(--ink-faint); font-size:12px;
+  }
+  footer h4{ color:var(--ink-muted); font-size:12.5px; margin:0 0 8px; font-weight:600; }
+  footer ul{ margin:0; padding-left:18px; }
+  footer li{ margin-bottom:5px; }
+
+  .note-box{
+    background:var(--panel-alt); border:1px dashed var(--panel-line); border-radius:10px;
+    padding:12px 16px; font-size:11.5px; color:var(--ink-faint); margin-top:8px;
+  }
+
+  .map-wrap{ position:relative; }
+  #bkkMap path.khet{
+    stroke:var(--panel); stroke-width:1.2; cursor:pointer; transition:opacity .12s ease;
+  }
+  #bkkMap path.khet:hover{ opacity:0.75; stroke:var(--ink); stroke-width:1.6; }
+  .map-tooltip{
+    position:absolute; pointer-events:none; opacity:0; transition:opacity .1s ease;
+    background:var(--ink); color:var(--void); font-family:'IBM Plex Sans Thai',sans-serif;
+    font-size:12px; padding:7px 11px; border-radius:8px; white-space:nowrap; z-index:10;
+    box-shadow:0 6px 18px rgba(43,36,28,0.25);
+  }
+  .map-tooltip b{ color:var(--gold-pale); }
+  .map-legend{ display:flex; align-items:center; gap:10px; margin-top:12px; font-size:11px; color:var(--ink-faint); }
+  .map-legend .scale{ flex:1; height:8px; border-radius:4px;
+    background:linear-gradient(90deg, var(--panel-alt), var(--gold)); }
+  .off-map-item{
+    background:var(--panel-alt); border:1px solid var(--panel-line); border-radius:10px;
+    padding:10px 14px;
+  }
+  .off-map-item .n{ font-family:'Fraunces',serif; font-size:20px; font-weight:600; color:var(--ink); }
+  .off-map-item .l{ font-size:11.5px; color:var(--ink-faint); margin-top:2px; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="mudmee"></div>
+  <div class="top-inner">
+    <div>
+      <p class="brand-eyebrow">LINE OA · Loyalty &amp; CRM Analytics</p>
+      <h1 class="brand">อีหล่า อีสาน<em>กายะ</em></h1>
+      <p class="brand-sub">แดชบอร์ดวิเคราะห์ข้อมูลสมาชิก CRM — 5 สาขา · ทองหล่อ, สุรวงศ์, บางนา, สะพานควาย, ราชพฤกษ์</p>
+    </div>
+    <div class="snapshot">
+      <div id="liveStatus">🔄 กำลังโหลดข้อมูลจาก Google Sheets...</div>
+      <div>สมาชิกทั้งหมด <b id="snapshotTotal">-</b> ราย</div>
+      <button id="refreshBtn" class="refresh-btn">รีเฟรชข้อมูล</button>
+    </div>
+  </div>
+</header>
+
+<div id="errorBanner" class="error-banner" style="display:none;"></div>
+
+<main>
+
+  <div class="filterbar">
+    <div class="filtergroup">
+      <span class="filterlabel">สาขา</span>
+      <div id="branchChips"></div>
+    </div>
+    <div class="filtergroup">
+      <span class="filterlabel">ช่วงเดือน</span>
+      <select id="monthFrom" class="msel"></select>
+      <span style="color:var(--ink-faint);font-size:12px;">ถึง</span>
+      <select id="monthTo" class="msel"></select>
+    </div>
+    <div class="filternote">ตัวกรองเดือนมีผลกับ KPI สมาชิกใหม่/ยอดขาย/แต้มสุทธิ และกราฟการเติบโตของสมาชิก / ยอดขาย / แต้มสะสม — สาขาไม่มีผลกับยอดขายและแต้ม เนื่องจากข้อมูลดิบไม่ได้บันทึกสาขาในธุรกรรมประเภทนี้</div>
+  </div>
+
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <!-- SECTION 1: Growth & Engagement -->
+  <section>
+    <div class="section-head">
+      <span class="section-num">01</span>
+      <h2 class="section-title">การเติบโตของสมาชิกและการมีส่วนร่วม</h2>
+      <span class="section-desc">Member Growth &amp; Engagement</span>
+    </div>
+    <div class="grid grid-2" style="margin-bottom:16px;">
+      <div class="card tall">
+        <h3>จำนวนสมาชิกใหม่รายเดือน แยกตามสาขา</h3>
+        <p class="cardnote">New Member Registrations by Month &amp; Branch</p>
+        <canvas id="chartGrowth"></canvas>
+      </div>
+      <div class="card tall">
+        <h3>ความล่าสุดในการใช้งาน (Recency)</h3>
+        <p class="cardnote">วันที่ใช้แต้ม/สแกนล่าสุด นับจากวันที่ข้อมูล</p>
+        <canvas id="chartRecency"></canvas>
+      </div>
+    </div>
+    <div class="grid grid-3">
+      <div class="card">
+        <h3>สัดส่วนสมาชิกตามสาขา</h3>
+        <p class="cardnote">Members by Branch</p>
+        <canvas id="chartBranch"></canvas>
+      </div>
+      <div class="card">
+        <h3>ระดับสมาชิก (Tier)</h3>
+        <p class="cardnote">Membership Tier Distribution</p>
+        <canvas id="chartTier"></canvas>
+      </div>
+      <div class="card">
+        <h3>การสมัครรับข่าวสาร</h3>
+        <p class="cardnote">Newsletter Opt-in Rate</p>
+        <canvas id="chartNewsletter"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 2: Demographics -->
+  <section>
+    <div class="section-head">
+      <span class="section-num">02</span>
+      <h2 class="section-title">ข้อมูลประชากรศาสตร์ของสมาชิก</h2>
+      <span class="section-desc">Demographics</span>
+    </div>
+    <div class="grid grid-2" style="margin-bottom:16px;">
+      <div class="card">
+        <h3>เพศ</h3>
+        <p class="cardnote">Gender Split</p>
+        <canvas id="chartGender"></canvas>
+      </div>
+      <div class="card">
+        <h3>ช่วงอายุ</h3>
+        <p class="cardnote">Age Range</p>
+        <canvas id="chartAge"></canvas>
+      </div>
+    </div>
+    <div class="grid" style="grid-template-columns:2.1fr 1fr; gap:16px;">
+      <div class="card">
+        <h3>ทำเลที่พักอาศัยของสมาชิก — แผนที่เขตกรุงเทพมหานคร</h3>
+        <p class="cardnote">Member Residence Heatmap by Bangkok Khet (ตอบได้มากกว่า 1 · ไล่สีตามจำนวนสมาชิกในโซนนั้น)</p>
+        <div class="map-wrap">
+          <svg id="bkkMap" viewBox="0 0 760 760" style="width:100%; height:auto; max-height:480px;"></svg>
+          <div id="mapTooltip" class="map-tooltip"></div>
+        </div>
+        <div id="mapLegend" class="map-legend"></div>
+      </div>
+      <div class="card">
+        <h3>นอกเขตกรุงเทพฯ</h3>
+        <p class="cardnote">Outside the 50 Bangkok Khets</p>
+        <div id="offMapList" style="display:flex; flex-direction:column; gap:10px; margin-top:6px;"></div>
+        <p class="cardnote" style="margin-top:14px;">22 เขตที่ไม่มีสี บนแผนที่ไม่ได้อยู่ในตัวเลือกโซนมาตรฐานของแบบสอบถาม จึงไม่มีข้อมูลจำนวนสมาชิกแยกเฉพาะเขต</p>
+      </div>
+    </div>
+    <div class="grid" style="grid-template-columns:1fr; margin-top:16px;">
+      <div class="card">
+        <h3>Top 10 ทำเลที่พักอาศัยของสมาชิก</h3>
+        <p class="cardnote">อันดับตามจำนวนสมาชิกที่ตอบแบบสอบถาม (ตอบได้มากกว่า 1 ตัวเลือก จึงรวมกันได้เกิน 100%) — แต่ละรายการคือ "โซน" ตามตัวเลือกในแบบสอบถาม ซึ่งบางโซนรวมหลายเขตของกรุงเทพฯ ไว้ด้วยกัน ไม่ใช่ข้อมูลระดับเขตเดี่ยว</p>
+        <table class="data-table" id="top10ResidenceTable">
+          <thead><tr><th>#</th><th>พื้นที่ / โซน</th><th style="text-align:right">จำนวนสมาชิก</th><th style="text-align:right">% ของผู้ตอบ</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 3: Commercial -->
+  <section>
+    <div class="section-head">
+      <span class="section-num">03</span>
+      <h2 class="section-title">ยอดขายและมูลค่าสมาชิก</h2>
+      <span class="section-desc">Sales &amp; Member Value</span>
+    </div>
+    <div class="grid grid-2" style="margin-bottom:16px;">
+      <div class="card tall">
+        <h3>ยอดขายรายเดือนจากธุรกรรม CRM (add-by-phone)</h3>
+        <p class="cardnote">Monthly Sales &amp; Transaction Count — บันทึกผ่านระบบสะสมแต้มเท่านั้น ไม่ใช่ยอดขาย POS ทั้งหมด</p>
+        <canvas id="chartSales"></canvas>
+      </div>
+      <div class="card tall">
+        <h3>สมาชิก 20 อันดับยอดซื้อสะสมสูงสุด</h3>
+        <p class="cardnote">Top 20 Spenders</p>
+        <div style="max-height:300px; overflow-y:auto;">
+          <table class="data-table" id="topSpendersTable">
+            <thead><tr><th>#</th><th>ชื่อ</th><th>สาขา</th><th>ระดับ</th><th style="text-align:right">ยอดซื้อสะสม</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card">
+        <h3>การกระจายยอดซื้อสะสมต่อคน</h3>
+        <p class="cardnote">Cumulative Spend per Member Distribution</p>
+        <canvas id="chartSpendBin"></canvas>
+      </div>
+      <div class="card">
+        <h3>สรุปมูลค่าเฉลี่ย</h3>
+        <p class="cardnote">Average Value Indicators</p>
+        <div id="avgValueBoxes" style="display:flex; flex-direction:column; gap:10px; margin-top:8px;"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 4: Loyalty & Points -->
+  <section>
+    <div class="section-head">
+      <span class="section-num">04</span>
+      <h2 class="section-title">ระบบแต้มสะสมและโปรโมชัน</h2>
+      <span class="section-desc">Loyalty Points &amp; Promotions</span>
+    </div>
+    <div class="grid grid-2" style="margin-bottom:16px;">
+      <div class="card tall">
+        <h3>แต้มที่ได้รับ vs แต้มที่ใช้ไป รายเดือน</h3>
+        <p class="cardnote">Points Earned vs Redeemed (คัดข้อมูลผิดปกติออกแล้ว)</p>
+        <canvas id="chartPoints"></canvas>
+      </div>
+      <div class="card tall">
+        <h3>สัดส่วนประเภทธุรกรรม</h3>
+        <p class="cardnote">Transaction Type Mix</p>
+        <canvas id="chartTxnType"></canvas>
+      </div>
+    </div>
+    <div class="grid" style="grid-template-columns:1fr;">
+      <div class="card">
+        <h3>โปรโมชันที่แลกรับมากที่สุด</h3>
+        <p class="cardnote">Top Redeemed Promotions</p>
+        <canvas id="chartPromo" style="max-height:220px;"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 5: Voice of Customer -->
+  <section>
+    <div class="section-head">
+      <span class="section-num">05</span>
+      <h2 class="section-title">เสียงของลูกค้า</h2>
+      <span class="section-desc">Voice of Customer</span>
+    </div>
+    <div class="grid grid-3">
+      <div class="card">
+        <h3>รู้จักร้านจากช่องทางไหน</h3>
+        <p class="cardnote">Acquisition Channel (ตอบได้มากกว่า 1)</p>
+        <canvas id="chartChannel"></canvas>
+      </div>
+      <div class="card">
+        <h3>สิ่งที่ประทับใจในร้าน</h3>
+        <p class="cardnote">Loved Attributes (ตอบได้มากกว่า 1)</p>
+        <canvas id="chartImpression"></canvas>
+      </div>
+      <div class="card">
+        <h3>เดินทางมาร้านด้วยวิธีไหน</h3>
+        <p class="cardnote">Mode of Travel (ตอบได้มากกว่า 1)</p>
+        <canvas id="chartTravel"></canvas>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="mudmee"></div>
+
+<footer>
+  <h4>หมายเหตุการทำความสะอาดข้อมูล (Data Cleaning Notes)</h4>
+  <ul id="cleaningNotes"></ul>
+</footer>
+
+<script id="bkk-geo-data" type="application/json">
+{"viewBox": "0 0 760 760", "khets": [{"name": "สายไหม", "zone": "ดอนเมือง สายไหม สะพานสูง", "d": "M439.8,72.3 L450.0,88.5 L449.8,102.4 L440.7,117.7 L437.0,110.9 L413.6,111.9 L403.8,102.9 L403.4,107.1 L388.5,102.4 L368.4,107.0 L352.3,101.2 L351.4,91.4 L368.6,61.4 L371.0,41.8 L388.4,44.7 L388.4,44.7 L388.2,45.5 L388.2,45.5 L388.0,46.5 L388.0,46.5 L388.2,47.4 L415.5,48.8 L447.6,49.3 L447.6,49.3 L447.6,51.5 L444.9,58.4 L444.9,58.4 L444.6,60.1 L444.6,60.1 L444.5,64.9 L443.6,66.5 L439.8,72.3 Z"}, {"name": "คันนายาว", "zone": null, "d": "M424.8,143.7 L440.0,149.2 L455.3,189.0 L465.1,210.7 L429.9,230.7 L427.9,212.1 L415.4,195.3 L413.9,170.2 L408.8,164.6 L398.5,166.6 L399.8,151.4 L410.4,149.7 L415.8,139.6 L430.1,139.1 L424.8,143.7 Z"}, {"name": "บางแค", "zone": "บางแค หนองแขม ภาษีเจริญ", "d": "M135.8,314.4 L137.7,344.4 L112.8,358.1 L95.9,367.1 L87.4,364.0 L78.3,328.6 L63.6,297.3 L57.1,283.1 L49.2,265.9 L112.1,269.2 L120.9,271.1 L126.1,291.4 L134.4,290.3 L134.7,293.9 L135.5,310.8 L135.8,314.4 Z"}, {"name": "หลักสี่", "zone": null, "d": "M334.9,101.2 L327.0,111.3 L325.1,136.2 L297.9,140.8 L274.8,147.1 L274.1,147.3 L274.3,147.0 L274.3,147.0 L274.3,147.0 L274.3,147.0 L275.0,144.5 L275.3,143.5 L275.3,143.5 L275.7,141.8 L275.7,141.8 L276.8,137.4 L276.8,137.3 L276.8,137.3 L276.8,137.1 L276.8,137.1 L276.9,136.6 L276.9,136.6 L277.3,135.0 L277.3,135.0 L277.7,132.9 L277.7,132.9 L278.1,130.8 L278.1,130.8 L278.1,130.8 L278.4,129.3 L279.8,124.3 L280.5,121.2 L280.5,121.2 L281.0,118.9 L281.0,118.9 L281.0,118.9 L281.0,118.9 L281.1,118.2 L281.1,118.2 L281.5,115.6 L281.5,115.6 L281.4,113.4 L281.4,113.4 L281.6,112.8 L284.0,104.4 L287.1,91.6 L287.1,91.6 L287.7,89.1 L287.7,89.1 L288.4,85.4 L288.4,85.4 L290.2,78.8 L291.9,72.3 L292.9,68.7 L326.5,87.0 L320.9,97.6 L334.9,101.2 Z"}, {"name": "ทวีวัฒนา", "zone": null, "d": "M112.7,256.2 L112.5,257.9 L112.1,269.2 L49.2,265.9 L57.1,283.1 L28.9,286.2 L28.8,286.1 L28.4,285.1 L28.4,284.9 L28.4,284.9 L28.3,284.8 L28.3,284.8 L28.3,284.6 L28.3,284.6 L28.3,284.6 L28.3,284.6 L28.3,284.6 L28.3,284.6 L28.3,284.5 L28.3,284.5 L28.3,284.5 L28.3,284.5 L28.3,284.4 L28.3,284.4 L28.3,284.3 L28.3,284.3 L28.3,284.3 L28.3,284.3 L29.1,283.2 L29.1,283.2 L29.1,283.2 L29.1,283.1 L29.1,283.1 L29.2,283.1 L29.2,283.1 L29.2,283.1 L29.2,283.1 L29.2,283.0 L29.2,283.0 L29.2,282.9 L29.2,282.9 L29.1,282.8 L29.1,282.8 L29.1,282.8 L29.1,282.8 L29.1,282.5 L29.1,282.5 L29.1,282.3 L29.1,282.3 L29.1,282.0 L29.1,282.0 L29.1,281.7 L29.1,281.7 L29.1,281.4 L29.1,281.4 L29.1,281.4 L29.1,281.4 L29.0,281.2 L29.0,281.2 L28.9,279.9 L28.9,279.9 L28.8,278.5 L28.8,278.5 L28.7,277.2 L28.7,277.2 L28.6,275.8 L28.6,275.8 L28.5,275.3 L28.5,275.3 L28.5,275.3 L28.5,275.3 L28.5,274.9 L28.5,274.9 L28.5,274.4 L28.5,274.4 L28.4,274.0 L28.4,274.0 L28.4,273.5 L28.4,273.5 L28.4,273.1 L28.4,273.1 L28.4,272.9 L28.4,272.9 L28.4,272.7 L28.4,272.7 L28.4,272.4 L28.4,272.4 L28.5,272.1 L28.5,272.1 L28.5,271.8 L28.5,271.8 L28.5,271.7 L28.5,271.7 L28.4,271.4 L28.4,271.4 L28.4,271.1 L28.4,271.1 L28.4,270.9 L28.4,270.9 L28.4,270.8 L28.4,270.8 L28.4,270.5 L28.4,270.5 L28.3,270.2 L28.3,270.2 L28.3,269.9 L28.3,269.9 L28.2,269.7 L28.2,269.7 L28.0,268.7 L27.9,268.4 L27.9,268.4 L27.9,268.2 L27.9,268.2 L27.8,267.9 L27.8,267.9 L27.8,267.6 L27.8,267.6 L27.7,267.4 L27.7,267.4 L27.7,267.3 L27.7,267.3 L27.7,267.1 L27.7,267.1 L27.8,266.9 L27.8,266.9 L27.8,266.7 L27.8,266.7 L27.8,266.6 L27.8,266.6 L27.8,266.4 L27.8,266.4 L27.8,266.4 L27.8,266.4 L27.7,265.5 L27.7,265.5 L27.7,265.5 L27.7,265.5 L27.7,265.4 L27.7,265.4 L26.5,265.0 L26.5,265.0 L26.5,265.0 L26.5,264.9 L26.5,264.9 L26.5,264.9 L26.5,264.9 L26.3,263.3 L26.3,263.3 L26.0,259.6 L26.0,259.6 L26.0,259.3 L26.0,259.3 L25.9,259.2 L25.9,259.2 L25.9,259.1 L25.9,259.1 L25.0,258.7 L25.0,258.7 L25.0,258.7 L25.0,258.7 L25.0,258.7 L24.9,258.3 L24.9,258.3 L24.9,258.3 L24.9,258.3 L24.9,258.3 L24.9,258.3 L24.1,257.9 L24.0,257.7 L24.0,257.7 L24.0,257.7 L24.0,257.7 L24.0,257.5 L24.0,257.5 L24.0,257.2 L24.0,257.2 L23.9,256.7 L23.9,256.7 L23.8,256.2 L23.8,256.2 L23.7,255.8 L23.7,255.8 L23.7,255.7 L23.7,255.7 L23.3,251.1 L23.3,251.1 L23.3,251.1 L23.3,251.1 L23.3,251.1 L23.3,251.1 L21.4,250.7 L21.8,248.1 L21.8,248.1 L22.2,246.9 L22.5,245.8 L22.5,245.8 L22.8,244.0 L22.8,244.0 L23.1,241.3 L23.1,241.3 L23.2,240.6 L23.4,238.6 L23.3,236.4 L23.3,236.4 L23.1,233.1 L23.1,233.1 L23.1,229.1 L23.1,229.1 L23.2,225.7 L23.2,225.7 L23.4,222.9 L23.4,222.9 L23.6,220.7 L23.6,220.7 L23.5,218.4 L23.5,218.4 L23.3,216.2 L23.3,216.2 L23.1,213.9 L23.1,213.9 L22.8,211.8 L22.8,211.8 L22.6,210.3 L22.6,210.3 L22.2,206.8 L22.2,206.8 L21.1,204.1 L20.0,202.6 L20.0,202.6 L102.1,205.1 L115.2,205.6 L117.9,205.8 L115.6,231.4 L112.7,256.2 Z"}, {"name": "ทุ่งครุ", "zone": null, "d": "M248.4,399.1 L242.3,403.3 L242.3,403.3 L242.6,407.0 L243.7,409.4 L243.7,409.4 L243.5,409.8 L240.3,416.7 L240.3,416.7 L240.4,417.1 L240.6,417.6 L240.6,417.6 L240.7,418.4 L240.6,419.1 L240.6,419.1 L240.5,420.1 L240.5,420.1 L240.8,422.2 L240.8,422.2 L241.0,423.6 L241.0,423.6 L241.3,425.1 L242.2,426.9 L242.2,426.9 L242.3,427.8 L242.3,427.8 L242.2,428.5 L242.2,428.5 L242.1,429.3 L242.5,430.1 L242.5,430.1 L242.7,431.0 L242.7,431.0 L242.7,432.1 L242.7,432.1 L242.9,433.1 L242.9,433.1 L243.0,433.9 L243.0,433.9 L243.3,434.8 L247.5,439.8 L247.5,439.8 L247.5,439.9 L247.5,439.9 L247.5,439.9 L247.5,439.9 L247.8,444.2 L239.5,447.2 L237.1,452.5 L237.1,452.5 L237.1,453.0 L237.1,453.0 L237.0,453.2 L237.0,453.2 L237.0,453.6 L237.0,453.6 L237.0,453.7 L222.3,456.4 L222.3,456.4 L222.3,456.4 L222.0,457.5 L222.0,457.5 L221.9,458.1 L221.9,458.1 L221.8,458.8 L221.8,458.8 L221.8,459.4 L221.8,459.4 L221.8,460.1 L216.6,465.6 L201.7,458.6 L201.4,457.4 L201.4,457.4 L201.2,455.8 L201.2,455.8 L200.8,454.1 L200.8,454.1 L196.4,451.7 L196.3,451.3 L196.3,451.3 L196.4,450.4 L196.4,450.4 L196.7,448.8 L196.7,448.8 L196.6,448.3 L196.6,448.3 L196.4,447.9 L196.0,447.8 L201.5,432.1 L190.1,421.2 L193.4,407.9 L188.0,379.0 L194.6,375.2 L212.9,382.0 L214.8,377.3 L219.5,379.1 L222.1,384.8 L226.2,378.1 L237.0,382.0 L250.3,376.5 L250.3,376.5 L250.5,377.5 L250.5,377.5 L250.5,378.9 L250.5,378.9 L250.6,379.9 L250.6,379.9 L250.6,381.3 L250.6,381.3 L250.5,382.4 L250.5,382.4 L250.3,384.0 L250.3,384.0 L250.0,385.4 L250.0,385.4 L249.9,386.4 L249.9,386.4 L249.8,388.0 L249.8,388.0 L249.7,388.7 L249.7,388.7 L249.6,389.7 L249.6,389.7 L249.4,391.3 L249.4,391.3 L249.4,392.5 L249.4,392.5 L249.3,393.7 L249.3,393.7 L249.1,394.9 L249.1,394.9 L248.9,396.2 L248.9,396.2 L248.8,397.6 L248.8,397.6 L248.6,398.6 L248.6,398.6 L248.6,398.8 L248.6,398.8 L248.6,398.8 L248.4,399.1 Z"}, {"name": "คลองสามวา", "zone": null, "d": "M494.1,163.3 L494.2,170.1 L485.6,170.2 L482.9,163.4 L483.0,170.7 L476.5,170.8 L477.5,181.1 L455.3,189.0 L440.0,149.2 L424.8,143.7 L430.1,139.1 L435.9,136.4 L440.7,117.7 L449.8,102.4 L450.0,88.5 L439.8,72.3 L443.6,66.5 L444.5,64.9 L467.8,65.1 L487.7,64.8 L493.0,64.7 L494.4,64.6 L514.7,65.2 L548.5,56.4 L554.0,55.0 L554.2,55.0 L568.3,51.3 L568.7,93.6 L572.2,98.2 L563.4,110.2 L576.6,147.7 L517.3,181.0 L510.3,164.8 L494.1,163.3 Z"}, {"name": "บางนา", "zone": "บางนา สวนหลวง ลาดกระบัง", "d": "M369.9,348.1 L371.8,355.6 L388.7,356.2 L394.7,366.2 L404.3,366.8 L403.3,369.5 L403.3,369.5 L402.9,371.2 L400.3,379.5 L397.6,387.7 L396.0,387.3 L394.0,386.8 L393.1,386.6 L392.3,386.4 L385.5,384.7 L377.5,382.8 L376.3,382.5 L360.4,378.3 L331.6,372.6 L316.8,367.8 L316.8,367.8 L316.8,367.6 L316.8,367.4 L316.8,367.4 L327.8,350.6 L328.0,349.8 L341.5,353.6 L369.9,348.1 Z"}, {"name": "สะพานสูง", "zone": "ดอนเมือง สายไหม สะพานสูง", "d": "M470.7,260.6 L469.0,290.5 L410.9,282.9 L411.0,282.6 L419.5,272.2 L434.4,266.3 L423.5,260.9 L417.5,237.8 L429.9,230.7 L465.1,210.7 L478.4,234.3 L466.9,260.2 L470.7,260.6 Z"}, {"name": "วังทองหลาง", "zone": "มีนบุรี บางกะปิ รามคำแหง", "d": "M344.2,207.5 L347.9,213.6 L355.4,214.0 L358.5,208.1 L369.0,207.5 L371.8,222.2 L375.4,221.5 L377.1,252.5 L359.2,255.0 L345.9,267.3 L334.9,251.5 L327.4,204.4 L344.2,207.5 Z"}, {"name": "บางบอน", "zone": null, "d": "M160.4,350.4 L78.5,425.5 L72.1,425.4 L71.8,421.0 L71.8,421.0 L66.6,414.8 L65.6,409.7 L65.6,409.7 L52.0,405.0 L52.0,404.9 L52.0,404.9 L52.0,404.9 L52.0,404.9 L52.0,404.8 L52.0,404.8 L51.9,404.8 L51.9,404.8 L51.9,404.6 L51.9,404.6 L51.9,404.4 L51.9,404.4 L51.9,404.2 L51.9,404.2 L51.9,404.2 L51.9,404.2 L51.9,404.0 L51.9,404.0 L51.9,404.0 L51.9,404.0 L51.9,404.0 L51.9,404.0 L51.8,403.9 L51.8,403.9 L48.2,403.6 L48.1,403.6 L48.1,403.6 L41.7,402.2 L39.8,399.1 L40.0,397.2 L40.0,397.2 L40.1,395.0 L40.1,395.0 L40.2,392.3 L40.2,392.3 L40.3,389.1 L40.3,389.1 L40.3,386.0 L40.3,386.0 L40.1,384.7 L40.1,384.7 L39.5,384.3 L87.4,364.0 L95.9,367.1 L112.8,358.1 L137.7,344.4 L149.6,337.0 L160.4,350.4 Z"}, {"name": "บางกอกน้อย", "zone": "ธนบุรี คลองสาน บางกอกน้อย บางกอกใหญ่ บางพลัด", "d": "M204.6,272.4 L199.5,273.4 L188.3,276.8 L178.4,275.3 L168.2,249.2 L172.3,236.5 L184.7,232.4 L183.9,230.5 L183.0,223.5 L186.1,222.7 L202.0,240.3 L212.5,254.0 L210.6,256.4 L209.3,270.6 L204.6,272.4 Z"}, {"name": "บางขุนเทียน", "zone": null, "d": "M181.4,383.1 L188.0,379.0 L193.4,407.9 L190.1,421.2 L201.5,432.1 L196.0,447.8 L195.9,447.7 L194.2,448.5 L194.2,448.5 L194.2,448.9 L191.7,453.3 L191.7,453.3 L191.6,454.5 L191.9,456.0 L191.9,456.0 L191.8,456.4 L187.7,458.6 L184.2,454.0 L184.3,453.1 L184.3,453.1 L184.5,452.4 L184.5,452.4 L183.6,450.2 L183.4,448.9 L183.4,448.9 L183.6,447.5 L183.6,447.5 L183.8,446.6 L183.8,446.6 L183.9,446.2 L183.9,446.2 L169.7,444.3 L167.0,448.8 L167.0,448.8 L166.7,450.3 L166.7,450.3 L166.6,451.0 L166.6,451.0 L166.5,451.9 L159.9,467.4 L159.9,467.4 L160.0,469.0 L160.0,469.0 L160.1,470.5 L160.1,470.5 L157.8,503.9 L157.8,503.9 L157.8,504.5 L157.8,504.5 L157.7,505.8 L157.7,505.8 L157.6,506.8 L157.6,506.8 L157.6,507.8 L157.6,507.8 L157.9,508.8 L157.9,508.8 L159.8,522.7 L159.8,522.7 L159.8,522.8 L159.8,522.8 L169.0,569.3 L171.4,579.7 L173.3,587.9 L173.4,588.0 L173.4,588.0 L117.7,582.6 L115.3,571.2 L115.3,571.2 L113.3,567.0 L113.3,567.0 L113.3,566.8 L113.1,566.1 L113.0,565.8 L113.0,565.8 L113.0,565.5 L113.0,565.5 L112.9,565.3 L112.9,565.3 L112.9,565.0 L112.9,565.0 L112.9,564.7 L112.9,564.7 L112.9,564.5 L112.9,564.5 L112.8,563.9 L112.8,563.9 L112.8,563.3 L112.8,563.3 L112.8,562.6 L112.8,562.6 L112.8,562.0 L112.8,562.0 L112.8,561.4 L112.8,561.4 L112.8,560.8 L112.8,560.8 L112.8,560.6 L112.8,560.6 L112.8,558.4 L112.8,558.4 L112.8,555.8 L112.8,555.8 L112.8,553.3 L112.8,553.3 L112.8,553.2 L112.8,553.2 L112.7,553.1 L112.7,553.1 L112.7,552.6 L112.7,552.6 L112.7,552.0 L112.7,552.0 L112.7,551.5 L112.7,551.5 L112.7,551.0 L112.7,551.0 L112.7,550.5 L112.7,550.5 L112.7,550.0 L112.7,550.0 L112.7,549.4 L112.7,549.4 L112.7,549.4 L112.7,549.4 L112.7,549.1 L112.7,549.1 L112.7,548.8 L112.7,548.8 L112.7,548.5 L112.7,548.5 L112.8,548.2 L112.8,548.2 L112.8,548.2 L112.8,548.2 L112.8,547.9 L112.8,547.9 L112.9,547.6 L112.9,547.6 L112.9,547.3 L112.9,547.3 L113.0,547.2 L113.0,547.0 L113.7,544.8 L113.8,544.6 L113.8,544.6 L113.8,544.4 L113.8,544.4 L113.8,544.4 L113.8,544.4 L113.8,544.3 L113.8,544.3 L113.8,544.2 L113.8,544.2 L113.9,544.0 L113.9,544.0 L113.9,543.8 L113.9,543.8 L113.9,543.7 L113.9,543.7 L113.9,543.1 L113.9,543.1 L114.0,542.4 L114.0,542.4 L114.0,541.8 L114.0,541.8 L114.0,541.5 L114.0,541.5 L114.0,541.2 L114.0,541.2 L114.1,540.9 L114.1,540.9 L114.1,540.7 L114.1,540.7 L114.0,540.5 L114.0,540.5 L114.0,540.2 L114.0,540.2 L114.0,539.9 L114.0,539.9 L114.0,539.6 L114.0,539.6 L114.0,539.5 L114.0,539.5 L114.0,539.5 L114.0,539.5 L114.0,539.2 L114.0,539.2 L114.0,539.2 L114.0,539.2 L113.9,538.8 L113.9,538.8 L113.9,538.4 L113.9,538.4 L113.9,538.3 L113.9,538.3 L113.9,538.2 L113.9,538.2 L113.9,537.9 L113.9,537.9 L113.9,537.7 L113.9,537.7 L113.9,537.4 L113.9,537.4 L113.9,537.2 L113.9,537.2 L113.9,537.1 L113.9,537.1 L113.9,537.0 L113.9,537.0 L113.9,536.7 L113.9,536.7 L113.8,536.5 L113.8,536.5 L113.8,536.5 L113.8,536.5 L113.8,536.3 L113.8,536.3 L113.8,536.2 L113.8,536.2 L113.8,536.0 L113.8,536.0 L113.7,535.8 L113.7,535.8 L113.7,535.8 L113.7,535.8 L113.7,535.6 L113.7,535.6 L113.7,535.3 L113.7,535.3 L113.7,535.3 L113.7,535.3 L113.6,534.3 L113.6,534.3 L113.6,533.3 L113.6,533.3 L113.5,532.7 L113.5,532.7 L113.5,532.4 L113.5,532.4 L113.5,532.1 L113.5,532.1 L113.4,531.7 L113.4,531.7 L113.4,531.5 L113.4,531.5 L113.4,531.5 L113.4,531.5 L113.4,531.3 L113.4,531.3 L113.4,531.1 L113.4,531.1 L113.4,531.0 L113.4,531.0 L113.4,530.7 L113.4,530.7 L113.4,530.4 L113.4,530.4 L113.4,530.0 L113.4,530.0 L113.4,529.6 L113.4,529.6 L113.4,529.6 L113.4,529.6 L113.4,529.4 L113.4,529.4 L113.4,529.3 L113.4,529.3 L116.4,528.3 L116.5,528.2 L116.5,528.2 L116.5,528.2 L116.5,528.2 L116.5,528.2 L116.5,528.1 L116.5,528.1 L116.5,527.9 L116.5,527.9 L116.5,527.6 L116.5,527.6 L116.5,527.4 L116.5,527.4 L116.6,527.2 L116.6,527.2 L116.6,527.1 L116.6,527.1 L116.6,527.0 L116.6,527.0 L116.6,526.9 L116.6,526.9 L123.7,524.1 L123.7,524.0 L124.0,523.9 L127.7,519.9 L127.7,519.8 L127.8,519.6 L128.0,518.7 L128.1,518.5 L128.1,518.5 L128.1,518.2 L128.1,518.2 L128.2,518.0 L128.2,518.0 L128.2,517.8 L128.2,517.8 L128.2,517.6 L128.2,517.6 L128.2,517.6 L128.2,517.6 L128.2,517.5 L128.2,517.5 L128.2,517.4 L128.2,517.4 L128.2,517.2 L128.2,517.2 L128.2,517.0 L128.2,517.0 L128.2,516.9 L128.2,516.9 L128.2,516.9 L128.2,516.8 L128.2,516.8 L128.2,516.8 L128.1,516.6 L128.1,516.6 L128.1,516.4 L128.1,516.4 L128.0,516.0 L127.9,515.8 L127.9,515.8 L127.6,515.0 L127.6,514.9 L127.5,514.9 L123.6,509.6 L123.5,509.4 L123.5,509.4 L122.9,507.9 L122.9,507.8 L122.9,507.8 L122.9,507.8 L122.9,507.8 L122.9,507.7 L122.8,507.6 L122.8,507.3 L122.8,507.3 L122.8,507.1 L122.8,507.1 L122.8,506.9 L122.8,506.9 L122.8,506.9 L122.8,506.9 L122.8,506.5 L122.8,506.5 L122.8,505.5 L122.8,505.5 L122.9,504.4 L122.9,504.4 L122.9,504.4 L122.9,504.4 L122.9,504.3 L122.9,504.3 L122.9,504.2 L122.9,504.2 L122.9,504.1 L122.9,504.1 L122.9,504.0 L122.9,504.0 L122.9,503.9 L122.9,503.9 L122.8,503.8 L122.8,503.8 L105.2,508.1 L98.0,503.4 L98.0,503.1 L98.0,503.1 L97.9,502.8 L97.9,502.8 L97.9,502.6 L97.9,502.6 L97.9,502.5 L97.9,502.5 L97.8,502.3 L97.8,502.3 L97.8,502.0 L97.8,502.0 L97.8,501.7 L97.8,501.7 L97.8,501.7 L97.8,501.7 L97.7,501.2 L97.7,501.2 L97.7,501.0 L97.7,501.0 L97.6,500.4 L97.6,500.4 L97.5,500.4 L97.4,499.9 L97.3,499.3 L97.3,499.3 L94.7,491.6 L94.6,491.4 L94.6,491.4 L94.6,491.2 L94.6,491.2 L94.6,490.9 L94.6,490.9 L94.5,490.7 L94.5,490.7 L94.5,490.5 L94.5,490.5 L94.5,490.2 L94.5,490.2 L94.5,490.1 L94.5,490.1 L94.5,490.0 L94.5,490.0 L94.5,490.0 L94.5,490.0 L94.5,490.0 L94.5,490.0 L94.5,489.8 L94.5,489.8 L94.5,489.6 L94.5,489.6 L94.5,489.4 L94.5,489.4 L94.5,489.3 L94.5,489.3 L94.4,489.2 L94.4,489.2 L94.4,489.1 L94.4,489.1 L90.4,483.1 L90.3,483.0 L90.3,483.0 L90.3,482.8 L90.3,482.8 L90.3,482.7 L90.3,482.7 L90.2,482.5 L90.2,482.5 L90.2,482.5 L90.2,482.5 L90.2,482.4 L90.2,482.4 L90.2,482.3 L90.2,482.3 L89.5,481.7 L89.5,481.7 L89.5,481.6 L88.9,480.9 L88.9,480.8 L88.9,480.8 L88.9,480.7 L88.9,480.7 L88.9,480.6 L88.9,480.6 L88.9,480.5 L88.9,480.5 L88.9,480.4 L88.9,480.4 L88.9,480.3 L88.9,480.3 L88.9,480.3 L88.9,480.3 L89.1,479.5 L89.2,479.3 L89.2,479.2 L89.3,478.9 L89.3,478.8 L89.3,478.8 L89.3,478.8 L89.3,478.8 L89.3,478.7 L89.3,478.7 L89.3,478.5 L89.3,478.5 L89.3,478.4 L89.3,478.4 L89.3,478.2 L89.3,478.2 L89.3,478.2 L89.2,478.1 L87.8,475.5 L87.8,475.4 L87.8,475.3 L87.7,475.3 L87.7,475.1 L87.7,475.1 L87.7,474.9 L87.7,474.9 L87.7,474.7 L87.7,474.7 L87.6,474.6 L87.6,474.6 L87.6,474.4 L87.6,474.4 L87.6,474.2 L87.6,474.2 L87.6,474.2 L87.6,474.2 L87.6,473.9 L87.6,473.9 L87.6,473.6 L87.6,473.6 L87.7,473.4 L87.7,473.4 L87.7,473.1 L87.7,473.1 L87.7,472.8 L87.7,472.8 L87.7,472.6 L87.7,472.6 L87.8,472.3 L87.8,472.3 L87.9,472.1 L87.9,472.1 L87.9,471.7 L87.9,471.7 L87.9,471.3 L87.9,471.3 L88.0,470.8 L88.0,470.8 L88.0,470.4 L88.0,470.4 L88.0,470.0 L88.0,470.0 L88.0,469.6 L88.0,469.6 L88.0,469.2 L88.0,469.2 L88.0,468.7 L88.0,468.7 L88.0,468.7 L88.0,468.7 L88.0,468.5 L88.0,468.5 L88.0,468.3 L88.0,468.3 L88.0,468.2 L88.0,468.2 L88.0,468.0 L88.0,468.0 L88.0,467.9 L88.0,467.9 L87.9,467.8 L87.9,467.8 L87.5,466.7 L87.4,466.6 L87.4,466.6 L86.9,465.7 L86.8,465.6 L86.8,465.6 L86.8,465.5 L86.8,465.5 L86.8,465.3 L86.8,465.3 L86.8,465.2 L86.8,465.2 L86.8,465.1 L86.8,465.1 L86.8,465.0 L86.8,465.0 L86.8,464.9 L86.8,464.9 L86.8,464.9 L86.8,464.9 L86.8,464.8 L86.8,464.8 L86.8,464.6 L86.8,464.6 L86.8,464.5 L86.8,464.5 L86.7,464.3 L86.7,464.3 L85.6,462.5 L85.5,462.4 L85.5,462.3 L83.5,461.2 L83.5,461.2 L83.4,461.2 L80.7,458.6 L80.6,458.5 L80.5,458.4 L80.2,457.6 L80.2,457.5 L80.2,457.5 L80.1,457.4 L80.1,457.4 L80.1,457.4 L80.1,457.4 L80.1,457.2 L80.1,457.2 L80.1,457.1 L80.1,457.1 L80.1,457.0 L80.1,457.0 L80.1,456.9 L80.1,456.9 L80.1,456.7 L80.1,456.7 L80.2,456.6 L80.2,456.6 L80.2,456.5 L80.2,456.4 L80.2,456.4 L80.4,455.8 L80.5,455.6 L80.5,455.6 L80.5,455.4 L80.5,455.4 L80.5,455.2 L80.5,455.2 L80.6,455.0 L80.6,455.0 L80.6,454.8 L80.6,454.8 L80.6,454.6 L80.6,454.6 L80.6,454.4 L80.6,454.4 L80.6,454.2 L80.6,454.2 L80.5,454.0 L80.5,454.0 L80.5,453.8 L80.5,453.8 L80.5,453.6 L80.5,453.6 L80.4,453.3 L80.3,453.1 L80.3,453.1 L80.3,452.8 L80.3,452.8 L80.2,452.6 L80.2,452.6 L80.2,452.3 L80.2,452.3 L80.2,452.0 L80.2,452.0 L80.2,451.8 L80.2,451.8 L80.1,451.6 L80.1,451.6 L80.2,451.6 L80.2,451.6 L80.2,450.6 L80.2,450.6 L80.2,450.5 L80.2,450.5 L80.3,450.3 L80.3,450.3 L80.3,450.0 L80.3,450.0 L80.3,449.8 L80.3,449.8 L80.3,449.6 L80.3,449.6 L80.3,449.5 L80.3,449.5 L80.3,449.3 L80.3,449.3 L80.3,449.1 L80.3,449.1 L80.3,449.1 L80.3,449.1 L80.3,448.9 L80.3,448.9 L80.3,448.6 L80.3,448.6 L80.2,448.4 L80.2,448.4 L80.2,448.2 L80.2,448.2 L80.2,448.0 L80.2,448.0 L80.2,447.8 L80.2,447.8 L80.2,447.7 L80.2,447.7 L80.2,447.5 L80.2,447.5 L80.2,447.3 L80.2,447.3 L80.2,447.0 L80.2,447.0 L80.3,446.8 L80.3,446.8 L80.3,446.5 L80.3,446.5 L80.3,446.5 L80.3,446.5 L80.4,446.0 L80.5,445.7 L80.5,445.7 L80.6,445.5 L80.6,445.5 L80.6,445.2 L80.6,445.2 L80.6,445.0 L80.6,445.0 L80.7,444.7 L80.7,444.7 L80.7,444.5 L80.7,444.5 L80.7,444.2 L80.7,444.2 L80.7,444.0 L80.7,444.0 L80.7,443.7 L80.7,443.7 L80.6,443.5 L80.6,443.5 L80.6,443.4 L80.6,443.4 L80.6,443.1 L80.6,443.1 L80.6,442.9 L80.6,442.9 L80.7,442.6 L80.7,442.6 L80.7,442.4 L80.7,442.4 L80.7,442.1 L80.7,442.1 L80.7,442.0 L80.7,442.0 L80.8,441.7 L80.8,441.7 L80.8,441.3 L80.8,441.3 L80.8,441.0 L80.8,441.0 L80.8,440.7 L80.8,440.7 L80.8,440.5 L80.8,440.5 L80.8,440.5 L80.8,440.5 L80.8,440.4 L80.8,440.4 L80.8,440.0 L80.8,440.0 L80.8,439.7 L80.8,439.7 L80.8,439.7 L80.8,439.7 L80.8,439.3 L80.8,439.3 L80.8,438.9 L80.8,438.9 L80.7,438.5 L80.7,438.5 L80.7,438.1 L80.7,438.1 L80.6,437.7 L80.6,437.7 L80.6,437.7 L80.6,437.7 L80.6,437.2 L80.6,437.2 L80.4,435.3 L80.4,435.3 L80.2,433.3 L80.2,433.3 L80.1,432.3 L80.1,432.3 L80.1,432.3 L80.1,432.3 L80.1,431.9 L80.1,431.9 L80.1,431.6 L80.1,431.6 L80.0,431.3 L80.0,431.3 L80.0,431.0 L80.0,431.0 L80.0,430.7 L80.0,430.7 L79.9,430.4 L79.9,430.4 L79.8,430.1 L79.8,430.1 L78.5,425.5 L160.4,350.4 L162.5,351.5 L162.6,359.3 L166.0,359.1 L164.8,376.2 L181.4,383.1 Z"}, {"name": "สาทร", "zone": null, "d": "M267.4,320.6 L257.0,322.0 L258.8,326.9 L240.4,323.3 L242.6,319.1 L232.4,314.7 L237.4,305.7 L241.0,306.7 L258.8,302.7 L275.7,297.3 L285.7,301.6 L286.7,309.1 L281.0,305.8 L272.5,316.3 L274.8,320.7 L267.4,320.6 Z"}, {"name": "บางซื่อ", "zone": null, "d": "M267.0,181.6 L276.1,186.1 L267.4,210.5 L242.6,207.2 L241.0,191.5 L241.0,191.4 L241.0,191.4 L231.6,188.3 L230.9,187.1 L230.8,186.8 L230.8,186.8 L230.8,186.5 L230.8,186.5 L230.9,186.0 L230.9,186.0 L231.1,185.1 L231.1,185.1 L231.5,183.9 L231.5,183.6 L231.5,183.6 L231.0,182.7 L230.9,182.2 L230.9,182.2 L230.9,181.8 L230.9,181.8 L231.7,181.2 L233.4,179.2 L233.4,179.2 L233.4,179.2 L234.8,179.1 L234.8,178.8 L234.8,178.8 L234.9,178.2 L234.9,178.2 L238.9,177.3 L238.9,177.0 L238.9,177.0 L238.9,176.6 L238.9,176.6 L274.1,147.3 L274.8,147.1 L267.0,181.6 Z"}, {"name": "ดินแดง", "zone": "รัชดา ลาดพร้าว ห้วยขวาง", "d": "M311.4,206.5 L310.7,220.2 L309.4,243.7 L299.6,262.2 L285.0,261.2 L274.2,252.9 L280.0,251.6 L295.4,213.9 L311.4,206.5 Z"}, {"name": "บึงกุ่ม", "zone": null, "d": "M399.8,151.4 L398.5,166.6 L408.8,164.6 L413.9,170.2 L415.4,195.3 L427.9,212.1 L429.9,230.7 L417.5,237.8 L407.4,243.5 L398.1,226.4 L391.5,223.7 L378.1,184.4 L369.0,186.8 L384.0,154.2 L399.8,151.4 Z"}, {"name": "ราษฎร์บูรณะ", "zone": null, "d": "M237.0,382.0 L226.2,378.1 L222.1,384.8 L219.5,379.1 L214.8,377.3 L212.9,382.0 L194.6,375.2 L202.0,372.0 L199.7,366.5 L209.6,354.2 L208.9,347.1 L201.1,341.3 L202.6,335.8 L211.4,335.4 L223.4,345.3 L230.4,346.6 L243.9,350.7 L248.3,353.9 L248.3,353.9 L248.3,353.9 L248.3,353.9 L248.2,354.4 L243.1,362.8 L243.1,362.8 L242.9,364.3 L242.9,364.3 L242.8,365.2 L242.8,365.2 L242.9,366.3 L242.9,366.3 L243.0,367.5 L250.2,375.8 L250.2,375.8 L250.3,376.5 L237.0,382.0 Z"}, {"name": "บางพลัด", "zone": "ธนบุรี คลองสาน บางกอกน้อย บางกอกใหญ่ บางพลัด", "d": "M212.6,253.9 L212.5,254.0 L202.0,240.3 L186.1,222.7 L183.0,223.5 L183.2,221.4 L183.9,221.3 L203.8,214.2 L216.2,209.9 L241.0,191.5 L242.6,207.2 L232.7,220.8 L230.0,223.6 L225.9,230.6 L221.8,240.8 L217.0,249.7 L212.6,253.9 Z"}, {"name": "ภาษีเจริญ", "zone": "บางแค หนองแขม ภาษีเจริญ", "d": "M176.1,313.4 L170.4,314.8 L171.2,319.1 L167.4,317.0 L163.9,322.7 L150.4,317.6 L145.5,329.6 L149.6,337.0 L137.7,344.4 L135.8,314.4 L135.5,310.8 L134.7,293.9 L134.4,290.3 L126.1,291.4 L120.9,271.1 L143.2,280.2 L172.2,276.4 L175.9,276.0 L176.2,275.9 L178.4,275.3 L180.1,291.3 L189.6,301.8 L186.7,309.9 L179.2,307.5 L176.1,313.4 Z"}, {"name": "หนองแขม", "zone": "บางแค หนองแขม ภาษีเจริญ", "d": "M78.3,328.6 L87.4,364.0 L39.5,384.3 L34.1,384.1 L33.7,384.1 L33.4,383.2 L33.6,381.1 L33.6,381.1 L35.6,377.9 L35.7,376.1 L35.7,376.1 L35.0,373.4 L35.0,373.4 L34.5,370.8 L34.5,370.8 L33.9,368.6 L33.0,365.3 L33.0,365.3 L32.5,362.4 L32.5,362.4 L26.9,352.5 L26.6,351.2 L26.6,351.2 L26.4,348.9 L26.4,348.9 L25.6,345.5 L24.7,342.6 L24.7,342.6 L24.4,340.5 L24.1,338.5 L24.1,338.5 L24.1,338.5 L24.0,336.9 L24.0,336.9 L23.8,334.2 L23.8,334.2 L23.4,331.8 L23.4,331.8 L23.4,329.8 L23.4,329.8 L29.1,322.6 L30.1,318.6 L30.1,318.6 L30.8,314.2 L30.8,314.2 L31.2,310.4 L31.2,310.4 L29.9,302.5 L29.9,302.5 L29.9,302.5 L29.9,302.4 L29.9,302.4 L29.9,302.3 L29.9,302.3 L29.9,302.3 L29.9,302.3 L29.9,302.2 L29.9,302.2 L29.9,302.0 L29.9,302.0 L29.9,302.0 L29.9,302.0 L29.9,301.9 L29.9,301.9 L29.9,301.7 L29.9,301.7 L29.9,301.7 L29.9,301.7 L29.8,301.6 L29.8,301.6 L29.8,301.5 L29.8,301.5 L29.1,298.2 L29.1,298.2 L29.8,297.2 L29.8,297.1 L29.8,297.1 L29.9,297.0 L29.9,297.0 L29.9,296.9 L29.9,296.9 L29.9,296.8 L29.9,296.8 L29.9,296.7 L29.9,296.7 L29.9,296.6 L29.9,296.6 L29.9,296.5 L29.9,296.5 L29.8,296.5 L29.8,296.5 L29.0,293.4 L28.9,293.1 L28.9,293.1 L28.9,292.8 L28.9,292.8 L28.8,292.5 L28.8,292.5 L28.8,292.2 L28.8,292.2 L28.7,291.9 L28.7,291.9 L28.7,291.5 L28.7,291.5 L28.7,291.2 L28.7,291.2 L28.7,290.9 L28.7,290.9 L28.7,290.9 L28.7,290.9 L28.7,290.9 L28.7,290.9 L28.7,290.8 L28.7,290.8 L28.9,286.3 L28.9,286.2 L57.1,283.1 L63.6,297.3 L78.3,328.6 Z"}, {"name": "ตลิ่งชัน", "zone": null, "d": "M172.2,276.4 L143.2,280.2 L120.9,271.1 L112.1,269.2 L112.5,257.9 L112.7,256.2 L115.6,231.4 L117.9,205.8 L119.6,205.9 L123.2,206.2 L135.4,207.2 L180.9,211.2 L187.3,214.4 L187.3,214.4 L187.1,214.7 L182.5,220.5 L182.5,220.5 L182.5,221.0 L183.1,221.4 L183.2,221.4 L183.0,223.5 L183.9,230.5 L184.7,232.4 L172.3,236.5 L168.2,249.2 L178.4,275.3 L176.2,275.9 L175.9,276.0 L172.2,276.4 Z"}, {"name": "บางคอแหลม", "zone": null, "d": "M240.4,323.3 L258.8,326.9 L260.2,330.4 L243.9,350.7 L230.4,346.6 L223.4,345.3 L211.4,335.4 L221.6,323.0 L232.4,314.7 L242.6,319.1 L240.4,323.3 Z"}, {"name": "ประเวศ", "zone": null, "d": "M471.0,335.1 L471.0,335.1 L470.9,336.0 L470.9,336.0 L470.6,337.4 L470.6,337.4 L470.4,338.5 L470.4,338.5 L470.4,339.5 L470.4,339.5 L470.2,340.4 L468.3,345.2 L468.3,345.2 L468.1,346.4 L465.5,353.3 L465.5,353.3 L465.4,353.8 L465.4,353.8 L465.4,353.8 L465.4,353.8 L465.2,354.5 L465.2,354.5 L464.9,355.4 L464.7,356.2 L464.7,356.2 L464.6,357.1 L464.6,357.1 L464.6,358.0 L464.6,358.0 L464.2,359.9 L464.2,359.9 L464.0,361.1 L464.0,361.1 L463.7,362.3 L458.0,374.4 L458.0,374.4 L457.7,376.2 L457.7,376.2 L457.3,377.6 L457.3,377.6 L457.1,379.4 L457.1,379.4 L456.9,381.0 L456.9,381.0 L456.7,382.6 L456.7,382.6 L456.3,384.2 L451.0,388.6 L450.8,388.3 L450.7,387.5 L450.7,387.5 L450.7,386.9 L450.7,386.9 L450.6,386.4 L450.6,386.4 L450.6,385.8 L450.6,385.8 L450.8,385.2 L450.8,385.2 L450.9,384.4 L450.9,384.4 L451.0,383.8 L451.0,383.8 L451.2,382.8 L451.2,382.8 L451.3,382.1 L451.3,382.1 L451.3,381.4 L451.3,381.4 L419.7,369.1 L420.0,367.7 L420.0,367.7 L406.8,362.9 L404.3,366.8 L394.7,366.2 L388.7,356.2 L381.4,328.4 L401.3,325.6 L399.9,294.2 L410.9,282.9 L469.0,290.5 L469.0,291.9 L470.6,307.5 L470.6,307.5 L470.7,308.7 L470.7,308.7 L470.8,311.1 L470.8,311.1 L471.0,312.8 L471.0,312.8 L471.4,314.3 L471.4,314.3 L471.7,316.1 L471.7,316.1 L472.0,317.9 L472.0,317.9 L472.4,319.9 L472.4,319.9 L472.6,322.3 L472.6,322.3 L472.9,323.9 L472.9,323.9 L473.2,325.8 L473.2,325.8 L473.3,327.0 L473.3,327.0 L473.4,328.4 L473.4,328.4 L473.3,329.8 L473.3,329.8 L473.1,331.5 L473.1,331.5 L473.0,332.8 L473.0,332.8 L472.8,333.7 L472.8,333.7 L472.7,334.4 L472.6,334.8 L472.6,334.8 L472.5,335.3 L472.5,335.3 L472.5,335.4 L471.0,335.1 L471.0,335.1 L471.0,335.1 Z"}, {"name": "จตุจักร", "zone": "จตุจักร บางเขน พหลโยธิน", "d": "M329.2,154.5 L330.1,165.0 L327.3,204.1 L311.4,206.5 L295.4,213.9 L267.4,210.5 L276.1,186.1 L267.0,181.6 L274.8,147.1 L297.9,140.8 L325.1,136.2 L329.2,154.5 Z"}, {"name": "วัฒนา", "zone": "วัฒนา คลองเตย พระโขนง", "d": "M347.6,301.1 L348.7,310.7 L343.2,314.6 L347.9,321.3 L343.0,323.6 L322.9,304.9 L314.8,299.0 L301.1,289.0 L300.2,288.4 L283.0,277.3 L282.4,270.5 L297.7,271.2 L306.7,272.8 L338.7,279.4 L346.9,283.5 L347.6,301.1 Z"}, {"name": "ราชเทวี", "zone": "ปทุมวัน บางรัก ราชเทวี", "d": "M271.5,269.2 L260.0,269.4 L252.9,269.4 L245.6,265.3 L247.7,259.8 L255.9,238.9 L269.1,249.0 L274.2,252.9 L285.0,261.2 L299.6,262.2 L297.7,271.2 L282.4,270.5 L271.5,269.2 Z"}, {"name": "ลาดพร้าว", "zone": "รัชดา ลาดพร้าว ห้วยขวาง", "d": "M384.0,154.2 L369.0,186.8 L358.5,208.1 L355.4,214.0 L347.9,213.6 L344.2,207.5 L327.4,204.4 L327.3,204.1 L330.1,165.0 L329.2,154.5 L363.5,148.8 L375.1,155.9 L384.0,154.2 Z"}, {"name": "จอมทอง", "zone": null, "d": "M208.9,347.1 L209.6,354.2 L199.7,366.5 L202.0,372.0 L194.6,375.2 L188.0,379.0 L181.4,383.1 L164.8,376.2 L166.0,359.1 L162.6,359.3 L162.5,351.5 L160.4,350.4 L149.6,337.0 L145.5,329.6 L150.4,317.6 L163.9,322.7 L167.4,317.0 L171.2,319.1 L170.4,314.8 L176.1,313.4 L179.2,307.5 L186.7,309.9 L183.1,317.8 L196.0,318.6 L202.4,334.9 L202.6,335.8 L201.1,341.3 L208.9,347.1 Z"}, {"name": "ดอนเมือง", "zone": "ดอนเมือง สายไหม สะพานสูง", "d": "M350.8,34.6 L349.3,20.7 L349.3,20.7 L367.4,27.6 L368.2,27.9 L368.9,28.9 L368.9,28.9 L369.2,32.0 L369.2,32.0 L369.9,35.4 L369.9,35.4 L370.6,39.4 L370.6,39.4 L371.0,41.8 L368.6,61.4 L351.4,91.4 L334.9,101.2 L320.9,97.6 L326.5,87.0 L292.9,68.7 L293.9,64.9 L294.6,61.8 L294.6,61.8 L294.8,60.8 L294.8,60.8 L295.6,57.7 L295.8,56.6 L296.3,54.2 L296.7,51.7 L296.7,51.7 L297.1,49.5 L297.1,49.5 L297.6,47.0 L297.6,47.0 L298.3,44.6 L298.3,44.6 L298.9,41.7 L298.9,41.7 L299.0,41.3 L299.4,39.5 L300.2,35.4 L300.2,35.4 L300.3,34.8 L300.3,34.8 L301.7,29.3 L301.9,29.0 L302.7,26.0 L303.1,24.0 L313.5,20.0 L350.8,34.6 Z"}, {"name": "คลองเตย", "zone": "วัฒนา คลองเตย พระโขนง", "d": "M343.0,323.6 L321.5,333.2 L320.8,332.6 L316.9,330.2 L307.8,326.0 L288.0,322.1 L286.7,309.1 L285.7,301.6 L283.0,277.3 L300.2,288.4 L301.1,289.0 L314.8,299.0 L322.9,304.9 L343.0,323.6 Z"}, {"name": "สวนหลวง", "zone": "บางนา สวนหลวง ลาดกระบัง", "d": "M411.0,282.6 L410.9,282.9 L399.9,294.2 L401.3,325.6 L381.4,328.4 L379.2,323.5 L347.9,321.3 L343.2,314.6 L348.7,310.7 L347.6,301.1 L346.9,283.5 L338.7,279.4 L342.4,270.8 L354.0,276.1 L383.7,268.5 L411.0,282.6 Z"}, {"name": "บางกะปิ", "zone": "มีนบุรี บางกะปิ รามคำแหง", "d": "M419.5,272.2 L411.0,282.6 L383.7,268.5 L354.0,276.1 L342.4,270.8 L345.9,267.3 L359.2,255.0 L377.1,252.5 L375.4,221.5 L371.8,222.2 L369.0,207.5 L358.5,208.1 L369.0,186.8 L378.1,184.4 L391.5,223.7 L398.1,226.4 L407.4,243.5 L417.5,237.8 L423.5,260.9 L434.4,266.3 L419.5,272.2 Z"}, {"name": "ปทุมวัน", "zone": "ปทุมวัน บางรัก ราชเทวี", "d": "M282.4,270.5 L283.0,277.3 L285.7,301.6 L275.7,297.3 L266.6,293.4 L266.3,293.3 L262.8,291.8 L257.1,289.3 L248.4,285.7 L241.7,283.1 L242.4,273.9 L243.1,269.6 L243.7,264.7 L245.6,265.3 L252.9,269.4 L260.0,269.4 L271.5,269.2 L282.4,270.5 Z"}, {"name": "บางรัก", "zone": "ปทุมวัน บางรัก ราชเทวี", "d": "M266.6,293.4 L275.7,297.3 L258.8,302.7 L241.0,306.7 L237.4,305.7 L237.7,293.8 L241.1,290.6 L241.7,283.1 L248.4,285.7 L257.1,289.3 L262.8,291.8 L266.3,293.3 L266.6,293.4 Z"}, {"name": "บางเขน", "zone": "จตุจักร บางเขน พหลโยธิน", "d": "M403.4,107.1 L403.8,102.9 L413.6,111.9 L437.0,110.9 L440.7,117.7 L435.9,136.4 L430.1,139.1 L415.8,139.6 L410.4,149.7 L399.8,151.4 L384.0,154.2 L375.1,155.9 L363.5,148.8 L329.2,154.5 L325.1,136.2 L327.0,111.3 L334.9,101.2 L351.4,91.4 L352.3,101.2 L368.4,107.0 L388.5,102.4 L403.4,107.1 Z"}, {"name": "ดุสิต", "zone": null, "d": "M247.7,259.8 L245.6,265.3 L243.7,264.7 L242.5,260.4 L238.4,256.1 L237.5,255.2 L234.2,251.9 L227.7,244.5 L221.8,240.8 L225.9,230.6 L230.0,223.6 L232.7,220.8 L242.6,207.2 L267.4,210.5 L255.9,238.9 L247.7,259.8 Z"}, {"name": "หนองจอก", "zone": null, "d": "M669.6,283.2 L657.1,267.9 L649.5,244.2 L627.4,243.1 L621.5,247.2 L618.2,246.7 L615.2,247.2 L594.6,226.9 L569.9,227.4 L571.3,215.0 L586.3,198.0 L579.0,194.8 L578.9,182.9 L584.2,175.9 L587.1,142.9 L576.6,147.7 L563.4,110.2 L572.2,98.2 L568.7,93.6 L568.3,51.3 L568.9,51.2 L623.8,42.4 L632.9,41.2 L670.2,36.2 L709.9,31.1 L709.9,31.1 L709.9,42.5 L709.9,42.5 L709.5,46.4 L709.5,46.4 L708.9,50.6 L708.9,50.6 L708.5,54.7 L708.5,54.7 L707.8,60.6 L707.8,60.6 L707.4,65.0 L707.4,65.0 L706.7,69.1 L706.7,69.1 L705.9,74.7 L705.9,74.7 L705.5,79.9 L705.5,79.9 L704.8,84.5 L704.8,84.5 L704.2,89.9 L704.2,89.9 L703.9,95.6 L703.9,95.6 L703.2,101.0 L703.2,101.0 L703.0,104.0 L703.0,104.0 L702.9,106.0 L702.9,106.0 L702.4,110.2 L702.4,110.2 L702.2,115.6 L702.2,115.6 L702.3,121.8 L702.3,121.8 L702.3,126.6 L702.3,126.6 L702.3,131.5 L702.3,131.5 L702.1,134.6 L701.5,135.5 L701.5,135.5 L701.3,139.5 L701.3,139.5 L701.1,144.1 L701.1,144.1 L701.0,146.4 L701.0,146.4 L701.0,146.4 L701.0,146.6 L701.0,146.6 L700.6,148.8 L710.3,151.5 L710.3,151.5 L708.5,153.2 L703.8,160.9 L740.0,190.0 L740.0,190.0 L737.7,193.4 L733.3,199.2 L731.4,201.8 L731.3,201.9 L703.7,223.9 L669.6,283.2 Z"}, {"name": "พระนคร", "zone": null, "d": "M223.0,282.3 L221.4,281.8 L215.4,279.6 L213.5,277.8 L209.3,270.6 L210.6,256.4 L212.5,254.0 L212.6,253.9 L217.0,249.7 L221.8,240.8 L227.7,244.5 L234.2,251.9 L232.2,256.4 L230.2,260.8 L229.9,260.9 L229.8,263.9 L228.0,271.2 L227.8,272.4 L226.9,274.8 L223.0,282.3 Z"}, {"name": "มีนบุรี", "zone": "มีนบุรี บางกะปิ รามคำแหง", "d": "M510.3,164.8 L517.3,181.0 L576.6,147.7 L587.1,142.9 L584.2,175.9 L578.9,182.9 L579.0,194.8 L586.3,198.0 L571.3,215.0 L563.7,207.3 L556.7,209.2 L556.9,229.8 L540.2,229.2 L530.4,236.8 L514.0,235.1 L513.9,239.3 L505.1,239.6 L505.1,235.2 L498.6,238.4 L478.4,234.3 L465.1,210.7 L455.3,189.0 L477.5,181.1 L476.5,170.8 L483.0,170.7 L482.9,163.4 L485.6,170.2 L494.2,170.1 L494.1,163.3 L510.3,164.8 Z"}, {"name": "ห้วยขวาง", "zone": "รัชดา ลาดพร้าว ห้วยขวาง", "d": "M345.9,267.3 L342.4,270.8 L338.7,279.4 L306.7,272.8 L297.7,271.2 L299.6,262.2 L309.4,243.7 L310.7,220.2 L311.4,206.5 L327.3,204.1 L327.4,204.4 L334.9,251.5 L345.9,267.3 Z"}, {"name": "คลองสาน", "zone": "ธนบุรี คลองสาน บางกอกน้อย บางกอกใหญ่ บางพลัด", "d": "M221.6,323.0 L214.9,304.0 L214.8,303.7 L215.3,296.4 L216.9,291.7 L218.5,286.8 L221.4,281.8 L223.0,282.3 L230.8,284.3 L234.0,286.3 L237.2,291.7 L237.7,293.8 L237.4,305.7 L232.4,314.7 L221.6,323.0 Z"}, {"name": "ธนบุรี", "zone": "ธนบุรี คลองสาน บางกอกน้อย บางกอกใหญ่ บางพลัด", "d": "M221.6,323.0 L211.4,335.4 L202.6,335.8 L202.4,334.9 L196.0,318.6 L183.1,317.8 L186.7,309.9 L189.6,301.8 L197.8,301.5 L206.1,295.7 L208.6,285.5 L213.5,277.8 L215.4,279.6 L221.4,281.8 L218.5,286.8 L216.9,291.7 L215.3,296.4 L214.8,303.7 L214.9,304.0 L221.6,323.0 Z"}, {"name": "บางกอกใหญ่", "zone": "ธนบุรี คลองสาน บางกอกน้อย บางกอกใหญ่ บางพลัด", "d": "M208.6,285.5 L206.1,295.7 L197.8,301.5 L189.6,301.8 L180.1,291.3 L178.4,275.3 L188.3,276.8 L199.5,273.4 L204.6,272.4 L209.3,270.6 L213.5,277.8 L208.6,285.5 Z"}, {"name": "สัมพันธวงศ์", "zone": null, "d": "M241.1,290.6 L237.7,293.8 L237.2,291.7 L234.0,286.3 L230.8,284.3 L223.0,282.3 L226.9,274.8 L227.8,272.4 L229.9,273.8 L237.6,280.1 L241.7,283.1 L241.1,290.6 Z"}, {"name": "พญาไท", "zone": null, "d": "M295.4,213.9 L280.0,251.6 L274.2,252.9 L269.1,249.0 L255.9,238.9 L267.4,210.5 L295.4,213.9 Z"}, {"name": "ลาดกระบัง", "zone": "บางนา สวนหลวง ลาดกระบัง", "d": "M615.2,247.2 L618.2,246.7 L621.5,247.2 L627.4,243.1 L649.5,244.2 L657.1,267.9 L669.6,283.2 L642.9,328.5 L642.9,328.5 L643.0,328.7 L642.9,328.7 L613.9,322.3 L562.9,309.3 L559.1,309.2 L530.7,309.3 L530.6,309.3 L515.7,309.4 L470.6,307.5 L469.0,291.9 L469.0,290.5 L470.7,260.6 L466.9,260.2 L478.4,234.3 L498.6,238.4 L505.1,235.2 L505.1,239.6 L513.9,239.3 L514.0,235.1 L530.4,236.8 L540.2,229.2 L556.9,229.8 L556.7,209.2 L563.7,207.3 L571.3,215.0 L569.9,227.4 L594.6,226.9 L615.2,247.2 Z"}, {"name": "ยานนาวา", "zone": null, "d": "M267.1,366.5 L256.5,361.5 L256.0,361.1 L249.1,354.7 L248.6,354.1 L248.3,353.9 L243.9,350.7 L260.2,330.4 L258.8,326.9 L257.0,322.0 L267.4,320.6 L274.8,320.7 L272.5,316.3 L281.0,305.8 L286.7,309.1 L288.0,322.1 L287.2,322.6 L283.5,327.0 L283.5,327.0 L283.3,328.4 L283.3,328.4 L283.0,329.7 L283.0,329.7 L283.0,331.4 L283.0,331.4 L283.1,332.7 L283.1,332.7 L283.4,334.2 L284.8,339.4 L284.8,339.4 L284.9,340.4 L284.9,340.4 L285.0,341.6 L285.0,341.6 L285.1,342.6 L285.1,342.6 L285.1,343.0 L285.2,343.9 L285.2,343.9 L285.2,345.1 L285.2,345.1 L285.2,346.3 L285.2,346.3 L284.9,347.6 L284.9,347.6 L284.5,349.0 L284.5,349.0 L284.4,349.9 L284.4,349.9 L284.2,350.8 L284.2,350.8 L284.1,351.9 L284.1,351.9 L284.0,352.8 L284.0,352.8 L283.7,354.1 L283.7,354.1 L283.4,355.2 L282.0,358.6 L277.9,363.7 L267.1,366.5 Z"}, {"name": "ป้อมปราบศัตรูพ่าย", "zone": null, "d": "M241.7,283.1 L237.6,280.1 L229.9,273.8 L227.8,272.4 L228.0,271.2 L229.8,263.9 L229.9,260.9 L230.2,260.8 L232.2,256.4 L234.2,251.9 L237.5,255.2 L238.4,256.1 L242.5,260.4 L243.7,264.7 L243.1,269.6 L242.4,273.9 L241.7,283.1 Z"}, {"name": "พระโขนง", "zone": "วัฒนา คลองเตย พระโขนง", "d": "M379.2,323.5 L381.4,328.4 L388.7,356.2 L371.8,355.6 L369.9,348.1 L341.5,353.6 L328.0,349.8 L328.0,349.7 L328.1,349.1 L328.1,349.1 L328.5,348.2 L328.5,347.7 L328.5,347.7 L328.6,346.8 L328.6,346.8 L328.6,346.0 L328.6,346.0 L328.5,345.2 L328.5,345.2 L327.9,343.4 L327.7,342.4 L327.7,342.4 L327.0,340.5 L326.9,340.4 L326.9,340.4 L321.9,333.6 L321.5,333.2 L343.0,323.6 L347.9,321.3 L379.2,323.5 Z"}]}
+</script>
+
+<script>
+// ===================== CONFIG =====================
+const SHEET_ID = '1WBrLpMr0RbyMD7LqxNY-v_HV7x0bFMvlGW9vPhXl3mg';
+const GID_CUSTOMER = '0';
+const GID_USAGE = '185787951';
+const csvUrl = (gid) => `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}`;
+const BRANCH_ORDER = ['ทองหล่อ','สุรวงศ์','บางนา','สะพานควาย','ราชพฤกษ์'];
+const BKK_GEO = JSON.parse(document.getElementById('bkk-geo-data').textContent);
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // auto-refresh every 5 minutes
+
+const COLORS = {
+  gold:'#C2872A', jade:'#4C7A57', maroon:'#A6402F', indigo:'#385D82',
+  gold2:'#E0B15E', jade2:'#84A88C', maroon2:'#C97A6C', indigo2:'#6E8FAE',
+  grid:'rgba(43,36,28,0.08)', text:'#6B5F4E', textStrong:'#2B241C'
+};
+const PALETTE = [COLORS.gold, COLORS.indigo, COLORS.jade, COLORS.maroon, COLORS.gold2, COLORS.indigo2, COLORS.jade2, COLORS.maroon2, '#96876F'];
+if(typeof Chart !== 'undefined'){
+  Chart.defaults.font.family = "'IBM Plex Sans Thai', sans-serif";
+  Chart.defaults.color = COLORS.text;
+  Chart.defaults.borderColor = COLORS.grid;
+}
+
+function fmtNum(n){ return Math.round(n||0).toLocaleString('th-TH'); }
+function fmtBaht(n){ return '฿' + Math.round(n||0).toLocaleString('th-TH'); }
+
+// ===================== CSV FETCH =====================
+function fetchSheet(gid, label){
+  return fetch(csvUrl(gid))
+    .then(res => {
+      if(!res.ok){
+        throw new Error(`โหลดชีท "${label}" ไม่สำเร็จ (HTTP ${res.status}). ตรวจสอบว่าตั้งค่าแชร์ Google Sheet เป็น "ทุกคนที่มีลิงก์ดูได้" แล้ว`);
+      }
+      return res.text();
+    })
+    .then(csvText => {
+      const parsed = Papa.parse(csvText, { header:true, skipEmptyLines:true });
+      if(parsed.errors && parsed.errors.length){
+        console.warn(`CSV parse warnings for ${label}:`, parsed.errors.slice(0,5));
+      }
+      return parsed.data;
+    });
+}
+
+// ===================== CLEANING HELPERS =====================
+function cleanBranch(x){
+  if(!x) return null;
+  const t = String(x).replace('อีหล่า อีสานกายะ','').trim();
+  return t || null;
+}
+function cleanGender(g){
+  if(!g) return 'ไม่ระบุ';
+  const t = String(g).trim();
+  if(t.toLowerCase()==='notspecified') return 'ไม่ระบุ';
+  if(t.toLowerCase()==='lgbtq+') return 'LGBTQ+';
+  return t;
+}
+function parseThaiDate(s){
+  if(!s) return null;
+  const m = String(s).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{1,2})/);
+  if(!m) return null;
+  const d = +m[1], mo = +m[2], y = +m[3], h = +m[4], mi = +m[5];
+  const dt = new Date(y, mo-1, d, h, mi);
+  return isNaN(dt.getTime()) ? null : dt;
+}
+function toMonthKey(dt){
+  if(!dt) return null;
+  return dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0');
+}
+function num(v){
+  if(v===undefined || v===null || v==='') return 0;
+  const n = parseFloat(String(v).replace(/,/g,''));
+  return isNaN(n) ? 0 : n;
+}
+
+function splitMulti(values){
+  const counter = {};
+  let respondents = 0;
+  values.forEach(v=>{
+    if(!v) return;
+    const s = String(v).trim();
+    if(s==='' || s==='-' || s==='ไม่มี') return;
+    respondents++;
+    const seen = new Set();
+    s.split(',').forEach(p=>{
+      let key = p.trim();
+      if(!key || key==='-') return;
+      const low = key.toLowerCase();
+      if(low==='ig') key='IG';
+      else if(low==='taxi') key='Taxi';
+      else if(low==='tiktok') key='Tiktok';
+      else if(low==='facebook') key='Facebook';
+      else if(low==='google map') key='Google map';
+      else if(key==='เพื่อน') key='เพื่อนแนะนำ';
+      if(seen.has(key)) return;
+      seen.add(key);
+      counter[key] = (counter[key]||0) + 1;
+    });
+  });
+  return { counter, respondents };
+}
+function topNPlusOther(counter, n, otherLabel){
+  const entries = Object.entries(counter).sort((a,b)=>b[1]-a[1]);
+  const top = entries.slice(0,n);
+  const rest = entries.slice(n).reduce((s,[,v])=>s+v, 0);
+  const out = Object.fromEntries(top);
+  if(rest) out[otherLabel] = rest;
+  return out;
+}
+function sortObjDesc(obj){
+  return Object.fromEntries(Object.entries(obj).sort((a,b)=>b[1]-a[1]));
+}
+
+const PREDEFINED_ZONES = new Set([
+  'บางนา สวนหลวง ลาดกระบัง','ปทุมวัน บางรัก ราชเทวี','ปริมณฑล','วัฒนา คลองเตย พระโขนง',
+  'รัชดา ลาดพร้าว ห้วยขวาง','ธนบุรี คลองสาน บางกอกน้อย บางกอกใหญ่ บางพลัด',
+  'จตุจักร บางเขน พหลโยธิน','ต่างจังหวัด','มีนบุรี บางกะปิ รามคำแหง',
+  'บางแค หนองแขม ภาษีเจริญ','ดอนเมือง สายไหม สะพานสูง'
+]);
+const AGE_ORDER = ['<18','15-19','20-24','25-29','30-34','35-39','40-44','45-49','50-54','55-59','60-64','65-69','70-74','75-79'];
+const SPEND_BINS = [
+  {max:1, label:'0 (ยังไม่ซื้อ/ไม่บันทึก)'},
+  {max:1000, label:'1-999'},
+  {max:3000, label:'1,000-2,999'},
+  {max:5000, label:'3,000-4,999'},
+  {max:10000, label:'5,000-9,999'},
+  {max:20000, label:'10,000-19,999'},
+  {max:Infinity, label:'20,000+'}
+];
+
+// ===================== MAIN PROCESSING PIPELINE =====================
+function processData(custRows, usageRows){
+  // ---- customer sheet ----
+  const cust = custRows.filter(r => r['ชื่อ'] && String(r['ชื่อ']).trim() !== '').map(r=>{
+    const regDt = parseThaiDate(r['วันที่สมัครสมาชิก']);
+    const lastDt = parseThaiDate(r['การใช้งานล่าสุด']);
+    return {
+      ชื่อ: r['ชื่อ'],
+      สาขา_clean: cleanBranch(r['สาขา']),
+      เพศ_clean: cleanGender(r['เพศ']),
+      กลุ่มสมาชิก_clean: (r['ชื่อกลุ่มสมาชิก'] && String(r['ชื่อกลุ่มสมาชิก']).trim()) || 'ไม่มีกลุ่ม',
+      ช่วงอายุ: r['ช่วงอายุ'] ? String(r['ช่วงอายุ']).trim() : null,
+      regDt, lastDt,
+      reg_month: toMonthKey(regDt),
+      คะแนนคงเหลือ: num(r['คะแนนคงเหลือ']),
+      คะแนนสะสม: num(r['คะแนนสะสม']),
+      ยอดซื้อสะสม: num(r['ยอดซื้อสะสม']),
+      รับข่าวสาร: (r['รับข่าวสาร'] && String(r['รับข่าวสาร']).trim()) || 'ไม่ระบุ',
+      พักอยู่อาศัยแถวไหน: r['พักอยู่อาศัยแถวไหน'],
+      รู้จักร้านจากช่องทางไหน: r['รู้จักร้านจากช่องทางไหน '],
+      สิ่งที่ประทับใจในร้าน: r['สิ่งที่ประทับใจในร้าน '],
+      เดินทางมาร้านด้วยวิธีไหน: r['เดินทางมาร้านด้วยวิธีไหน '],
+    };
+  });
+
+  // NOW = latest date seen across registration / last-used
+  let NOW = new Date(2020,0,1);
+  cust.forEach(c=>{
+    if(c.regDt && c.regDt > NOW) NOW = c.regDt;
+    if(c.lastDt && c.lastDt > NOW) NOW = c.lastDt;
+  });
+
+  function recencyBucket(d){
+    if(!d) return 'ไม่เคยใช้งาน';
+    const days = Math.floor((NOW - d) / 86400000);
+    if(days <= 30) return '0-30 วัน';
+    if(days <= 90) return '31-90 วัน';
+    if(days <= 180) return '91-180 วัน';
+    if(days <= 365) return '181-365 วัน';
+    return 'มากกว่า 365 วัน';
+  }
+  cust.forEach(c => c.recency_bucket = recencyBucket(c.lastDt));
+
+  // ---- distributions ----
+  const branch_counts = {};
+  cust.forEach(c => { const b = c.สาขา_clean || 'ไม่ระบุ'; branch_counts[b] = (branch_counts[b]||0)+1; });
+
+  const tier_counts = {};
+  cust.forEach(c => { tier_counts[c.กลุ่มสมาชิก_clean] = (tier_counts[c.กลุ่มสมาชิก_clean]||0)+1; });
+
+  const gender_counts = {};
+  cust.forEach(c => { gender_counts[c.เพศ_clean] = (gender_counts[c.เพศ_clean]||0)+1; });
+
+  const ageRaw = {};
+  cust.forEach(c => { if(c.ช่วงอายุ) ageRaw[c.ช่วงอายุ] = (ageRaw[c.ช่วงอายุ]||0)+1; });
+  const age_counts = {};
+  AGE_ORDER.forEach(a => { if(ageRaw[a]!==undefined) age_counts[a] = ageRaw[a]; });
+
+  const recencyOrder = ['0-30 วัน','31-90 วัน','91-180 วัน','181-365 วัน','มากกว่า 365 วัน','ไม่เคยใช้งาน'];
+  const recencyRaw = {};
+  cust.forEach(c => { recencyRaw[c.recency_bucket] = (recencyRaw[c.recency_bucket]||0)+1; });
+  const recency_counts = {};
+  recencyOrder.forEach(r => recency_counts[r] = recencyRaw[r] || 0);
+
+  const newsletter_counts = {};
+  cust.forEach(c => { newsletter_counts[c.รับข่าวสาร] = (newsletter_counts[c.รับข่าวสาร]||0)+1; });
+
+  // ---- reg trend (month x branch) ----
+  const regTrendMap = {};
+  cust.forEach(c=>{
+    if(!c.reg_month) return;
+    const key = c.reg_month + '|' + (c.สาขา_clean||'');
+    regTrendMap[key] = (regTrendMap[key]||0)+1;
+  });
+  const reg_trend = Object.entries(regTrendMap).map(([k,count])=>{
+    const [reg_month, สาขา_clean] = k.split('|');
+    return { reg_month, สาขา_clean: สาขา_clean||null, count };
+  });
+
+  // ---- multi-select fields ----
+  const channelSplit = splitMulti(cust.map(c=>c.รู้จักร้านจากช่องทางไหน));
+  const impressionSplit = splitMulti(cust.map(c=>c.สิ่งที่ประทับใจในร้าน));
+  const travelSplit = splitMulti(cust.map(c=>c.เดินทางมาร้านด้วยวิธีไหน));
+  const channel_counts = topNPlusOther(channelSplit.counter, 6, 'อื่นๆ');
+  const impression_counts = topNPlusOther(impressionSplit.counter, 7, 'อื่นๆ');
+  const travel_counts = topNPlusOther(travelSplit.counter, 5, 'อื่นๆ');
+
+  // ---- residence zones ----
+  const residenceSplit = splitMulti(cust.map(c=>c.พักอยู่อาศัยแถวไหน));
+  const residence_counts = {};
+  let otherTotal = 0;
+  Object.entries(residenceSplit.counter).forEach(([k,v])=>{
+    if(PREDEFINED_ZONES.has(k)) residence_counts[k] = v;
+    else otherTotal += v;
+  });
+  if(otherTotal) residence_counts['พื้นที่อื่นๆ (ระบุเอง)'] = otherTotal;
+  const residence_n = residenceSplit.respondents;
+
+  // ---- spend distribution & top spenders ----
+  const spend_bin_counts = {};
+  SPEND_BINS.forEach(b => spend_bin_counts[b.label] = 0);
+  cust.forEach(c=>{
+    const v = c.ยอดซื้อสะสม;
+    for(const b of SPEND_BINS){ if(v < b.max){ spend_bin_counts[b.label]++; break; } }
+  });
+  const top_spenders = [...cust].filter(c=>c.ยอดซื้อสะสม>0)
+    .sort((a,b)=>b.ยอดซื้อสะสม - a.ยอดซื้อสะสม).slice(0,20)
+    .map(c=>({ ชื่อ:c.ชื่อ, สาขา_clean:c.สาขา_clean, ยอดซื้อสะสม:c.ยอดซื้อสะสม, คะแนนคงเหลือ:c.คะแนนคงเหลือ, กลุ่มสมาชิก_clean:c.กลุ่มสมาชิก_clean }));
+
+  // ---- usage sheet ----
+  const OUTLIER_THRESHOLD = 5000;
+  const usageAll = usageRows.filter(r => r['วันที่'] && String(r['วันที่']).trim()!=='').map(r=>{
+    const dt = parseThaiDate(r['วันที่']);
+    return {
+      dt, month: toMonthKey(dt),
+      ชื่อ: r['ชื่อ'],
+      สาขา_clean: cleanBranch(r['สาขา']),
+      เพิ่มคะแนน: num(r['เพิ่ม คะแนน']),
+      ลดคะแนน: num(r['ลด คะแนน']),
+      ยอดขาย: num(r['ยอดขาย']),
+      ประเภท: r['ประเภท'],
+      คำอธิบาย: r['คำอธิบาย'] || '',
+    };
+  });
+  const outliers = usageAll.filter(u => u.เพิ่มคะแนน > OUTLIER_THRESHOLD || u.ลดคะแนน > OUTLIER_THRESHOLD);
+  const outlierNames = [...new Set(outliers.map(o=>o.ชื่อ))];
+  const usageClean = usageAll.filter(u => u.เพิ่มคะแนน <= OUTLIER_THRESHOLD && u.ลดคะแนน <= OUTLIER_THRESHOLD);
+
+  const txn_type_counts = {};
+  usageClean.forEach(u => { const t = u.ประเภท||'ไม่ระบุ'; txn_type_counts[t] = (txn_type_counts[t]||0)+1; });
+
+  // points trend
+  const ptsMap = {};
+  usageClean.forEach(u=>{
+    if(!u.month) return;
+    if(!ptsMap[u.month]) ptsMap[u.month] = {points_earned:0, points_redeemed:0, transactions:0};
+    ptsMap[u.month].points_earned += u.เพิ่มคะแนน;
+    ptsMap[u.month].points_redeemed += u.ลดคะแนน;
+    ptsMap[u.month].transactions += 1;
+  });
+  const pts_trend = Object.entries(ptsMap).sort((a,b)=>a[0]<b[0]?-1:1).map(([month,v])=>({month, ...v}));
+
+  // sales trend (no branch dimension available on these rows)
+  const salesRows = usageClean.filter(u => u.ยอดขาย > 0);
+  const salesMap = {};
+  salesRows.forEach(u=>{
+    if(!u.month) return;
+    if(!salesMap[u.month]) salesMap[u.month] = {sales:0, txns:0};
+    salesMap[u.month].sales += u.ยอดขาย;
+    salesMap[u.month].txns += 1;
+  });
+  const sales_trend = Object.entries(salesMap).sort((a,b)=>a[0]<b[0]?-1:1).map(([month,v])=>({month, ...v}));
+  const total_sales = salesRows.reduce((s,u)=>s+u.ยอดขาย,0);
+  const total_sales_txns = salesRows.length;
+  const avg_ticket = total_sales_txns ? total_sales/total_sales_txns : 0;
+
+  // promo redemption
+  const promoCounter = {};
+  const promoRe = /[Rr]edeem [Pp]romotion\s*'([^']+)'/;
+  usageClean.forEach(u=>{
+    const m = promoRe.exec(u.คำอธิบาย);
+    if(m){ const name = m[1].trim(); promoCounter[name] = (promoCounter[name]||0)+1; }
+  });
+  const promo_top = Object.entries(promoCounter).sort((a,b)=>b[1]-a[1]).slice(0,15);
+
+  // ---- KPIs ----
+  const total_members = cust.length;
+  const active_members = cust.filter(c => c.recency_bucket==='0-30 วัน' || c.recency_bucket==='31-90 วัน').length;
+  const active_rate = total_members ? Math.round(active_members/total_members*1000)/10 : 0;
+  const members_30d = cust.filter(c => c.recency_bucket==='0-30 วัน').length;
+  const total_points_balance = cust.reduce((s,c)=>s+c.คะแนนคงเหลือ,0);
+  const total_points_earned_alltime = cust.reduce((s,c)=>s+c.คะแนนสะสม,0);
+  const avg_points_balance = total_members ? Math.round(total_points_balance/total_members*10)/10 : 0;
+  const rub = newsletter_counts['รับ']||0, mairub = newsletter_counts['ไม่รับ']||0;
+  const newsletter_opt_in_rate = (rub+mairub) ? Math.round(rub/(rub+mairub)*1000)/10 : 0;
+
+  const pad2 = n => String(n).padStart(2,'0');
+  const data_snapshot_date = `${NOW.getFullYear()}-${pad2(NOW.getMonth()+1)}-${pad2(NOW.getDate())} ${pad2(NOW.getHours())}:${pad2(NOW.getMinutes())}`;
+
+  const kpi = {
+    total_members, active_members, active_rate, members_30d,
+    total_points_balance: Math.round(total_points_balance),
+    total_points_earned_alltime: Math.round(total_points_earned_alltime),
+    avg_points_balance,
+    total_sales: Math.round(total_sales), total_sales_txns, avg_ticket: Math.round(avg_ticket),
+    newsletter_opt_in_rate, data_snapshot_date,
+    n_outliers_removed: outliers.length, outlier_names: outlierNames,
+  };
+
+  // ---- Bangkok map: merge static geo with live zone totals ----
+  const ZONE_TO_KHETS_KEYS = new Set(BKK_GEO.khets.map(k=>k.zone).filter(Boolean));
+  const zone_totals = {};
+  ZONE_TO_KHETS_KEYS.forEach(z => zone_totals[z] = residence_counts[z] || 0);
+  const off_map = {
+    'ปริมณฑล': residence_counts['ปริมณฑล'] || 0,
+    'ต่างจังหวัด': residence_counts['ต่างจังหวัด'] || 0,
+    'พื้นที่อื่นๆ (ระบุเอง)': residence_counts['พื้นที่อื่นๆ (ระบุเอง)'] || 0,
+  };
+  const khets = BKK_GEO.khets.map(k => ({ ...k, count: k.zone ? (residence_counts[k.zone] ?? null) : null }));
+  const bkk_map = { viewBox: BKK_GEO.viewBox, khets, zone_totals, off_map };
+
+  return {
+    kpi, branch_counts, tier_counts, gender_counts, age_counts, recency_counts,
+    reg_trend, spend_bin_counts, top_spenders, newsletter_counts,
+    channel_counts, impression_counts, travel_counts,
+    residence_counts: sortObjDesc(residence_counts), residence_n,
+    txn_type_counts, pts_trend, sales_trend, promo_top,
+    branch_order: BRANCH_ORDER, bkk_map,
+  };
+}
+
+// ===================== RENDERING (unchanged shape from DATA) =====================
+let DATA = null;
+
+function renderKPIs(periodMembers, periodSales, periodSalesTxns, periodPtsEarned, periodPtsRedeemed, mFrom, mTo){
+  const kpiDefs = [
+    {label:'สมาชิกทั้งหมด (ทุกช่วงเวลา)', value:fmtNum(DATA.kpi.total_members), sub:'Total Members', cls:''},
+    {label:'สมาชิก Active (ใช้งานใน 90 วัน)', value:fmtNum(DATA.kpi.active_members), sub:`${DATA.kpi.active_rate}% ของสมาชิกทั้งหมด`, cls:'jade'},
+    {label:`สมาชิกใหม่ในช่วงที่เลือก`, value:fmtNum(periodMembers), sub:`${mFrom} — ${mTo}`, cls:'gold'},
+    {label:'ยอดขายในช่วงที่เลือก', value:fmtBaht(periodSales), sub:`${fmtNum(periodSalesTxns)} ธุรกรรม`, cls:'indigo'},
+    {label:'แต้มสุทธิในช่วงที่เลือก', value:fmtNum(periodPtsEarned-periodPtsRedeemed), sub:`ได้รับ ${fmtNum(periodPtsEarned)} · ใช้ไป ${fmtNum(periodPtsRedeemed)}`, cls:'maroon'},
+    {label:'ยอดซื้อเฉลี่ยต่อบิล', value:fmtBaht(DATA.kpi.avg_ticket), sub:'Avg Ticket Size (ทุกช่วงเวลา)', cls:'indigo'},
+    {label:'แต้มคงเหลือในระบบ', value:fmtNum(DATA.kpi.total_points_balance), sub:'Outstanding Points Liability', cls:'maroon'},
+    {label:'อัตราการรับข่าวสาร', value:DATA.kpi.newsletter_opt_in_rate+'%', sub:'Newsletter Opt-in Rate', cls:'gold'},
+  ];
+  document.getElementById('kpiGrid').innerHTML = kpiDefs.map(k => `
+    <div class="kpi ${k.cls}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value">${k.value}</div>
+      <div class="kpi-sub">${k.sub}</div>
+    </div>`).join('');
+}
+
+let branches = [], selectedBranches = new Set();
+const branchChipsEl = document.getElementById('branchChips');
+function renderBranchChips(){
+  branchChipsEl.innerHTML = branches.map(b => `<span class="chip ${selectedBranches.has(b)?'active':''}" data-branch="${b}" style="margin-right:6px;">${b}</span>`).join('')
+    + `<span class="chip" id="chipAll" style="margin-right:6px;">ทั้งหมด</span>`;
+  branchChipsEl.querySelectorAll('.chip[data-branch]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const b = el.dataset.branch;
+      if(selectedBranches.has(b)){ selectedBranches.delete(b); } else { selectedBranches.add(b); }
+      if(selectedBranches.size===0) selectedBranches = new Set(branches);
+      renderBranchChips(); updateAll();
+    });
+  });
+  document.getElementById('chipAll').addEventListener('click', ()=>{ selectedBranches = new Set(branches); renderBranchChips(); updateAll(); });
+}
+
+let months = [];
+const monthFromEl = document.getElementById('monthFrom');
+const monthToEl = document.getElementById('monthTo');
+
+let charts = {};
+function makeOrUpdate(id, config){
+  if(charts[id]){ charts[id].data = config.data; charts[id].options = config.options; charts[id].update(); }
+  else { charts[id] = new Chart(document.getElementById(id), config); }
+}
+const legendBottom = { position:'bottom', labels:{ boxWidth:11, padding:12, font:{size:11} } };
+
+function updateAll(){
+  const mFrom = monthFromEl.value, mTo = monthToEl.value;
+
+  // --- Period KPIs driven by the month filter ---
+  const regInRange = DATA.reg_trend.filter(r => r.reg_month >= mFrom && r.reg_month <= mTo && selectedBranches.has(r.สาขา_clean));
+  const periodMembers = regInRange.reduce((s,r)=>s+r.count, 0);
+  const salesInRange = DATA.sales_trend.filter(s => s.month >= mFrom && s.month <= mTo);
+  const periodSales = salesInRange.reduce((s,r)=>s+r.sales, 0);
+  const periodSalesTxns = salesInRange.reduce((s,r)=>s+r.txns, 0);
+  const ptsInRange = DATA.pts_trend.filter(p => p.month >= mFrom && p.month <= mTo);
+  const periodPtsEarned = ptsInRange.reduce((s,r)=>s+r.points_earned, 0);
+  const periodPtsRedeemed = ptsInRange.reduce((s,r)=>s+r.points_redeemed, 0);
+  renderKPIs(periodMembers, periodSales, periodSalesTxns, periodPtsEarned, periodPtsRedeemed, mFrom, mTo);
+
+  try{
+  // --- Growth chart (stacked bar by branch, filtered by month range & branch selection) ---
+  const regFiltered = DATA.reg_trend.filter(r => r.reg_month >= mFrom && r.reg_month <= mTo && selectedBranches.has(r.สาขา_clean));
+  const growMonths = [...new Set(regFiltered.map(r=>r.reg_month))].sort();
+  const datasets = branches.filter(b=>selectedBranches.has(b)).map((b,i)=>({
+    label:b,
+    data: growMonths.map(m => { const rec = regFiltered.find(r=>r.reg_month===m && r.สาขา_clean===b); return rec? rec.count : 0; }),
+    backgroundColor: PALETTE[i%PALETTE.length],
+    stack:'a'
+  }));
+  makeOrUpdate('chartGrowth', {
+    type:'bar',
+    data:{ labels:growMonths, datasets },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:legendBottom },
+      scales:{ x:{stacked:true, grid:{display:false}}, y:{stacked:true, grid:{color:COLORS.grid}} } }
+  });
+
+  // --- Recency ---
+  makeOrUpdate('chartRecency', {
+    type:'bar',
+    data:{ labels:Object.keys(DATA.recency_counts), datasets:[{ data:Object.values(DATA.recency_counts), backgroundColor:COLORS.jade, borderRadius:4 }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ x:{grid:{color:COLORS.grid}}, y:{grid:{display:false}} } }
+  });
+
+  // --- Branch donut (respects branch filter for visual emphasis but shows all counts) ---
+  makeOrUpdate('chartBranch', {
+    type:'doughnut',
+    data:{ labels:branches, datasets:[{ data:branches.map(b=>DATA.branch_counts[b]||0),
+      backgroundColor: branches.map((b,i)=> selectedBranches.has(b)? PALETTE[i%PALETTE.length] : '#E4DBC7') }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:legendBottom }, cutout:'62%' }
+  });
+
+  // --- Tier ---
+  const tierLabels = Object.keys(DATA.tier_counts);
+  makeOrUpdate('chartTier', {
+    type:'bar',
+    data:{ labels:tierLabels, datasets:[{ data:tierLabels.map(t=>DATA.tier_counts[t]), backgroundColor:COLORS.gold, borderRadius:4 }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ x:{grid:{color:COLORS.grid}}, y:{grid:{display:false}} } }
+  });
+
+  // --- Newsletter ---
+  makeOrUpdate('chartNewsletter', {
+    type:'doughnut',
+    data:{ labels:Object.keys(DATA.newsletter_counts), datasets:[{ data:Object.values(DATA.newsletter_counts), backgroundColor:[COLORS.gold, COLORS.maroon] }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:legendBottom }, cutout:'62%' }
+  });
+
+  // --- Gender ---
+  makeOrUpdate('chartGender', {
+    type:'doughnut',
+    data:{ labels:Object.keys(DATA.gender_counts), datasets:[{ data:Object.values(DATA.gender_counts), backgroundColor:PALETTE }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:legendBottom }, cutout:'62%' }
+  });
+
+  // --- Age ---
+  makeOrUpdate('chartAge', {
+    type:'bar',
+    data:{ labels:Object.keys(DATA.age_counts), datasets:[{ data:Object.values(DATA.age_counts), backgroundColor:COLORS.indigo, borderRadius:4 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ x:{grid:{display:false}, ticks:{font:{size:10}}}, y:{grid:{color:COLORS.grid}} } }
+  });
+
+  // --- Sales trend (month filter only, branch not tracked in this data) ---
+  const salesFiltered = DATA.sales_trend.filter(s=>s.month>=mFrom && s.month<=mTo);
+  makeOrUpdate('chartSales', {
+    type:'bar',
+    data:{ labels:salesFiltered.map(s=>s.month),
+      datasets:[
+        { type:'bar', label:'ยอดขาย (บาท)', data:salesFiltered.map(s=>s.sales), backgroundColor:COLORS.gold, yAxisID:'y', borderRadius:4 },
+        { type:'line', label:'จำนวนธุรกรรม', data:salesFiltered.map(s=>s.txns), borderColor:COLORS.indigo, backgroundColor:COLORS.indigo, yAxisID:'y1', tension:0.35 }
+      ] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:legendBottom },
+      scales:{
+        x:{ grid:{display:false} },
+        y:{ position:'left', grid:{color:COLORS.grid}, ticks:{ callback:v=>(v/1000)+'k' } },
+        y1:{ position:'right', grid:{display:false} }
+      } }
+  });
+
+  // --- Points trend ---
+  const ptsFiltered = DATA.pts_trend.filter(p=>p.month>=mFrom && p.month<=mTo);
+  makeOrUpdate('chartPoints', {
+    type:'line',
+    data:{ labels:ptsFiltered.map(p=>p.month), datasets:[
+      { label:'แต้มที่ได้รับ', data:ptsFiltered.map(p=>p.points_earned), borderColor:COLORS.jade, backgroundColor:'rgba(122,155,126,0.15)', fill:true, tension:0.35 },
+      { label:'แต้มที่ใช้ไป', data:ptsFiltered.map(p=>p.points_redeemed), borderColor:COLORS.maroon, backgroundColor:'rgba(194,86,75,0.12)', fill:true, tension:0.35 }
+    ] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:legendBottom },
+      scales:{ x:{grid:{display:false}}, y:{grid:{color:COLORS.grid}} } }
+  });
+  } catch(err){ console.error('Chart rendering failed (Chart.js may be blocked):', err); }
+}
+
+function renderStaticCharts(){
+  try{
+  makeOrUpdate('chartTxnType', {
+    type:'doughnut',
+    data:{ labels:Object.keys(DATA.txn_type_counts), datasets:[{ data:Object.values(DATA.txn_type_counts), backgroundColor:PALETTE }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:legendBottom }, cutout:'58%' }
+  });
+
+  const promoLabels = DATA.promo_top.map(p=>p[0]);
+  makeOrUpdate('chartPromo', {
+    type:'bar',
+    data:{ labels:promoLabels, datasets:[{ data:DATA.promo_top.map(p=>p[1]), backgroundColor:COLORS.gold, borderRadius:4 }] },
+    options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ x:{grid:{color:COLORS.grid}}, y:{grid:{display:false}} } }
+  });
+
+  function horizBar(id, obj, color){
+    const labels = Object.keys(obj);
+    makeOrUpdate(id, {
+      type:'bar',
+      data:{ labels, datasets:[{ data:labels.map(l=>obj[l]), backgroundColor:color, borderRadius:4 }] },
+      options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+        scales:{ x:{grid:{color:COLORS.grid}}, y:{grid:{display:false}, ticks:{font:{size:10.5}}} } }
+    });
+  }
+  horizBar('chartChannel', DATA.channel_counts, COLORS.indigo);
+  horizBar('chartImpression', DATA.impression_counts, COLORS.jade);
+  horizBar('chartTravel', DATA.travel_counts, COLORS.maroon);
+
+  const spendLabels = Object.keys(DATA.spend_bin_counts);
+  makeOrUpdate('chartSpendBin', {
+    type:'bar',
+    data:{ labels:spendLabels, datasets:[{ data:spendLabels.map(l=>DATA.spend_bin_counts[l]), backgroundColor:COLORS.gold, borderRadius:4 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ x:{grid:{display:false}, ticks:{font:{size:9.5}}}, y:{grid:{color:COLORS.grid}} } }
+  });
+  } catch(err){ console.error('Chart rendering failed (Chart.js may be blocked):', err); }
+
+  const tbody = document.querySelector('#topSpendersTable tbody');
+  tbody.innerHTML = DATA.top_spenders.map((s,i)=>`
+    <tr>
+      <td><span class="rank">${i+1}</span></td>
+      <td>${s['ชื่อ']}</td>
+      <td><span class="tag">${s['สาขา_clean']||'-'}</span></td>
+      <td>${s['กลุ่มสมาชิก_clean']}</td>
+      <td class="num">${fmtBaht(s['ยอดซื้อสะสม'])}</td>
+    </tr>`).join('');
+
+  document.getElementById('avgValueBoxes').innerHTML = `
+    <div class="note-box"><b style="color:var(--ink);">${fmtBaht(DATA.kpi.avg_ticket)}</b> — ยอดซื้อเฉลี่ยต่อบิล (จากธุรกรรม add-by-phone ${fmtNum(DATA.kpi.total_sales_txns)} รายการ)</div>
+    <div class="note-box"><b style="color:var(--ink);">${fmtNum(DATA.kpi.avg_points_balance)}</b> — แต้มคงเหลือเฉลี่ยต่อสมาชิก 1 คน</div>
+    <div class="note-box"><b style="color:var(--ink);">${fmtNum(DATA.kpi.total_points_earned_alltime)}</b> — แต้มสะสมรวมที่เคยได้รับตลอดอายุสมาชิก (คะแนนสะสม)</div>
+  `;
+
+  document.getElementById('cleaningNotes').innerHTML = `
+    <li>ข้อมูลนี้ดึงสดจาก Google Sheets โดยตรง (2 ชีท: รายงานข้อมูลลูกค้า และ รายงานการใช้งาน) ทุกครั้งที่เปิดหน้านี้ และรีเฟรชอัตโนมัติทุก 5 นาที</li>
+    <li>ลบธุรกรรมที่มีค่าผิดปกติ (แต้มเพิ่ม/ลด สูงเกิน 5,000 แต้มต่อครั้ง ซึ่งผิดธรรมชาติของโปรแกรมสะสมแต้มปกติ) จำนวน ${DATA.kpi.n_outliers_removed} รายการ${DATA.kpi.outlier_names.length? ` จากบัญชี "${DATA.kpi.outlier_names.join(', ')}"`:''} ก่อนคำนวณกราฟแต้มและยอดขาย</li>
+    <li>รวมคำตอบข้อความอิสระที่สะกดต่างกันแต่ความหมายเดียวกันในหัวข้อ "รู้จักร้านจากช่องทางไหน" / "เดินทางมาร้านด้วยวิธีไหน" (เช่น IG / Ig, Google map / กูเกิ้ลแมพ) และจัดกลุ่มคำตอบปลีกย่อยที่พบน้อยไว้ในหมวด "อื่นๆ" เพื่อให้อ่านกราฟง่ายขึ้น</li>
+    <li>เขตที่พักอาศัยที่เป็นข้อความอิสระ (ที่อยู่เฉพาะ, พิมพ์ผิด, ชื่อซอย ฯลฯ) ถูกจัดรวมเป็น "พื้นที่อื่นๆ (ระบุเอง)" แยกจาก 11 โซนหลักที่เป็นตัวเลือกมาตรฐาน</li>
+    <li>ช่วงอายุที่ผิดพลาดจากข้อมูลต้นทาง (เช่น "115-119" ปี) ถูกคัดออกจากกราฟช่วงอายุ เนื่องจากเป็นข้อมูลวันเกิดที่กรอกผิด</li>
+    <li>สถานะ "recency" (ความล่าสุดในการใช้งาน) คำนวณจากวันที่ใช้งานล่าสุดเทียบกับวันที่ล่าสุดที่พบในข้อมูล (${DATA.kpi.data_snapshot_date})</li>
+    <li>ยอดขายและแต้มที่ได้รับ/ใช้ไป อ้างอิงจากธุรกรรมในระบบ CRM (LINE OA) เท่านั้น ไม่ใช่ยอดขายจากระบบ POS ทั้งหมดของร้าน และไม่มีการบันทึกสาขาในธุรกรรมประเภท "แลกแต้มด้วยเบอร์โทร" (add-by-phone) จึงไม่สามารถแยกยอดขาย/แต้มตามสาขาได้ในชุดข้อมูลนี้</li>
+    <li>แผนที่ทำเลที่พักอาศัยอ้างอิงขอบเขตเขตการปกครองของกรุงเทพมหานคร (50 เขต) จาก OpenGISData-Thailand โซนในแบบสอบถามที่รวมหลายเขต (เช่น "บางนา สวนหลวง ลาดกระบัง") จะถูกไล่สีเท่ากันทุกเขตในกลุ่มนั้น เนื่องจากข้อมูลต้นฉบับไม่ได้แยกจำนวนสมาชิกเป็นรายเขต</li>
+  `;
+}
+
+function renderBkkMap(){
+  const mapData = DATA.bkk_map;
+  const svg = document.getElementById('bkkMap');
+  const tooltip = document.getElementById('mapTooltip');
+  const zoneValues = Object.values(mapData.zone_totals);
+  const maxCount = Math.max(...zoneValues, 0);
+  const minCount = Math.min(...zoneValues, 0);
+
+  function colorFor(count){
+    if(count === null || count === undefined) return '#EDE7D8';
+    const t = maxCount > minCount ? (count - minCount) / (maxCount - minCount) : 0.5;
+    const c1 = [243,238,225], c2 = [194,135,42];
+    const r = Math.round(c1[0] + (c2[0]-c1[0])*t);
+    const g = Math.round(c1[1] + (c2[1]-c1[1])*t);
+    const b = Math.round(c1[2] + (c2[2]-c1[2])*t);
+    return `rgb(${r},${g},${b})`;
+  }
+
+  svg.setAttribute('viewBox', mapData.viewBox);
+  svg.innerHTML = mapData.khets.map(k => `
+    <path class="khet" d="${k.d}" fill="${colorFor(k.count)}"
+      data-name="${k.name}" data-zone="${k.zone||''}" data-count="${k.count!==null && k.count!==undefined ? k.count : ''}"></path>
+  `).join('');
+
+  svg.querySelectorAll('path.khet').forEach(el=>{
+    el.addEventListener('mousemove', (e)=>{
+      const name = el.dataset.name, zone = el.dataset.zone, count = el.dataset.count;
+      tooltip.innerHTML = count
+        ? `เขต${name} <b>${Number(count).toLocaleString('th-TH')} คน</b><br><span style="opacity:0.75">โซน: ${zone}</span>`
+        : `เขต${name}<br><span style="opacity:0.75">ไม่มีข้อมูลสมาชิกแยกเขตนี้</span>`;
+      const wrapRect = svg.parentElement.getBoundingClientRect();
+      tooltip.style.left = (e.clientX - wrapRect.left + 14) + 'px';
+      tooltip.style.top = (e.clientY - wrapRect.top + 10) + 'px';
+      tooltip.style.opacity = 1;
+    });
+    el.addEventListener('mouseleave', ()=>{ tooltip.style.opacity = 0; });
+  });
+
+  document.getElementById('mapLegend').innerHTML = `
+    <span>${fmtNum(minCount)}</span>
+    <div class="scale"></div>
+    <span>${fmtNum(maxCount)} คน</span>
+    <span style="margin-left:14px; display:inline-flex; align-items:center; gap:5px;">
+      <span style="width:10px;height:10px;border-radius:3px;background:#EDE7D8;display:inline-block;"></span> ไม่มีข้อมูล
+    </span>
+  `;
+
+  const offMapLabels = { 'ปริมณฑล':'จังหวัดปริมณฑล (นนทบุรี, สมุทรปราการ ฯลฯ)', 'ต่างจังหวัด':'ต่างจังหวัด', 'พื้นที่อื่นๆ (ระบุเอง)':'พื้นที่อื่นๆ (ระบุเอง)' };
+  document.getElementById('offMapList').innerHTML = Object.entries(mapData.off_map).map(([k,v])=>`
+    <div class="off-map-item">
+      <div class="n">${fmtNum(v)} คน</div>
+      <div class="l">${offMapLabels[k]||k}</div>
+    </div>`).join('');
+
+  const resEntries = Object.entries(DATA.residence_counts).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const resTotalRespondents = DATA.residence_n;
+  const resTbody = document.querySelector('#top10ResidenceTable tbody');
+  resTbody.innerHTML = resEntries.map(([name,count],i)=>`
+    <tr>
+      <td><span class="rank">${i+1}</span></td>
+      <td>${offMapLabels[name] || name}</td>
+      <td class="num">${fmtNum(count)}</td>
+      <td class="num">${(count/resTotalRespondents*100).toFixed(1)}%</td>
+    </tr>`).join('');
+}
+
+function renderAll(){
+  branches = BRANCH_ORDER.filter(b => DATA.branch_counts[b] !== undefined);
+  if(!selectedBranches.size) selectedBranches = new Set(branches);
+  renderBranchChips();
+
+  months = [...new Set([
+    ...DATA.reg_trend.map(r=>r.reg_month),
+    ...DATA.sales_trend.map(s=>s.month),
+    ...DATA.pts_trend.map(p=>p.month)
+  ])].filter(Boolean).sort();
+  const prevFrom = monthFromEl.value, prevTo = monthToEl.value;
+  monthFromEl.innerHTML = months.map(m=>`<option value="${m}">${m}</option>`).join('');
+  monthToEl.innerHTML = months.map(m=>`<option value="${m}">${m}</option>`).join('');
+  monthFromEl.value = months.includes(prevFrom) ? prevFrom : months[0];
+  monthToEl.value = months.includes(prevTo) ? prevTo : months[months.length-1];
+
+  document.getElementById('snapshotTotal').textContent = fmtNum(DATA.kpi.total_members);
+
+  updateAll();
+  renderBkkMap();
+  renderStaticCharts();
+}
+
+// ===================== INIT / LIVE REFRESH =====================
+monthFromEl.addEventListener('change', updateAll);
+monthToEl.addEventListener('change', updateAll);
+
+const liveStatusEl = document.getElementById('liveStatus');
+const errorBannerEl = document.getElementById('errorBanner');
+const refreshBtn = document.getElementById('refreshBtn');
+
+function setStatus(text){ liveStatusEl.textContent = text; }
+function showError(msg){
+  errorBannerEl.style.display = 'block';
+  errorBannerEl.innerHTML = `⚠️ ${msg}`;
+}
+function hideError(){ errorBannerEl.style.display = 'none'; }
+
+let isLoading = false;
+function loadData(isManual){
+  if(isLoading) return;
+  isLoading = true;
+  refreshBtn.disabled = true;
+  setStatus(isManual ? '🔄 กำลังรีเฟรชข้อมูล...' : '🔄 กำลังโหลดข้อมูลจาก Google Sheets...');
+
+  Promise.all([
+    fetchSheet(GID_CUSTOMER, 'รายงานข้อมูลลูกค้า'),
+    fetchSheet(GID_USAGE, 'รายงานการใช้งาน')
+  ]).then(([custRows, usageRows])=>{
+    DATA = processData(custRows, usageRows);
+    renderAll();
+    hideError();
+    const now = new Date();
+    const pad2 = n => String(n).padStart(2,'0');
+    setStatus(`✅ อัปเดตล่าสุด ${pad2(now.getHours())}:${pad2(now.getMinutes())} น. (ข้อมูลในชีท ณ ${DATA.kpi.data_snapshot_date})`);
+  }).catch(err=>{
+    console.error(err);
+    setStatus('⚠️ โหลดข้อมูลไม่สำเร็จ');
+    showError((err && err.message) || 'เกิดข้อผิดพลาดในการโหลดข้อมูลจาก Google Sheets กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตหรือสิทธิ์การแชร์ชีท (ตั้งเป็น "ทุกคนที่มีลิงก์ - ดูได้")');
+  }).finally(()=>{
+    isLoading = false;
+    refreshBtn.disabled = false;
+  });
+}
+
+refreshBtn.addEventListener('click', ()=>loadData(true));
+loadData(false);
+setInterval(()=>loadData(false), REFRESH_INTERVAL_MS);
+</script>
+
+</body>
+</html>

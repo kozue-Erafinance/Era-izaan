@@ -562,18 +562,17 @@
     </div>
     <div class="unavailable-note" style="margin-bottom:16px;">หน้านี้เปรียบเทียบทั้ง 4 สาขา (ทองหล่อ, สุรวงศ์, บางนา, สะพานควาย) เสมอ โดยไม่ขึ้นกับตัวกรองสาขาด้านบน (แต่ยังกรองตามช่วงเดือนที่เลือกอยู่) — ไม่รวมราชพฤกษ์ตามที่ระบุไว้ ตัวเลข % คำนวณจากฐานผู้ตอบแบบสอบถามของแต่ละสาขาเอง ไม่ใช่ฐานรวมทุกสาขา</div>
 
-    <div class="grid" style="grid-template-columns:1.8fr 1fr; gap:16px; margin-bottom:16px;">
-      <div class="card">
-        <h3>Customer by Generation</h3>
-        <p class="cardnote">ลูกค้าแยกตาม Generation รายสาขา</p>
-        <canvas id="chartCmpGeneration" style="max-height:340px;"></canvas>
-        <p id="cmpGenerationInsight" class="cardnote" style="margin-top:12px; color:var(--ink-muted);"></p>
-      </div>
-      <div class="card">
-        <h3>สัดส่วนลูกค้าตามสาขา</h3>
-        <p class="cardnote">Customer Distribution by Branch</p>
-        <canvas id="chartBranch"></canvas>
-      </div>
+    <div class="card" style="margin-bottom:16px;">
+      <h3>สัดส่วนลูกค้าตามสาขา</h3>
+      <p class="cardnote">Customer Distribution by Branch</p>
+      <canvas id="chartBranch" style="max-height:260px;"></canvas>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <h3>Customer by Generation</h3>
+      <p class="cardnote">ลูกค้าแยกตาม Generation รายสาขา</p>
+      <canvas id="chartCmpGeneration" style="max-height:340px;"></canvas>
+      <p id="cmpGenerationInsight" class="cardnote" style="margin-top:12px; color:var(--ink-muted);"></p>
     </div>
     <div class="grid grid-4" id="cmpGenerationCards" style="margin-bottom:16px;"></div>
 
@@ -759,6 +758,26 @@ function topNPlusOther(counter, n, otherLabel){
 function sortObjDesc(obj){
   return Object.fromEntries(Object.entries(obj).sort((a,b)=>b[1]-a[1]));
 }
+// Wrap a label into multiple lines (Chart.js renders an array as stacked lines) so long
+// category names (e.g. Bangkok zone groups) don't get squeezed or clipped on chart axes.
+function wrapLabel(text, maxCharsPerLine){
+  const str = String(text);
+  if(str.length <= maxCharsPerLine) return str;
+  const words = str.split(' ');
+  const lines = [];
+  let current = '';
+  words.forEach(w=>{
+    const candidate = current ? current + ' ' + w : w;
+    if(candidate.length > maxCharsPerLine && current){
+      lines.push(current);
+      current = w;
+    } else {
+      current = candidate;
+    }
+  });
+  if(current) lines.push(current);
+  return lines.length > 1 ? lines : str;
+}
 function custKey(c){ return c.phone || ('name:'+c.ชื่อ); }
 function usageKey(u){ return u.phone || ('name:'+u.ชื่อ); }
 
@@ -792,12 +811,18 @@ function genBucket(age){
 // Branches compared on the Branch Comparison page (Ratchaphruek excluded per request)
 const COMPARE_BRANCHES = BRANCH_ORDER.filter(b => b !== 'ราชพฤกษ์');
 
-// "ข้อเสนอแนะอื่นๆ" (open-text feedback) cleaning: drop non-answers, group identical
-// cleaned phrases together (many customers type the same short praise, e.g. "ดี", "อร่อย"),
-// so recurring themes surface instead of a long noisy list.
+// "ข้อเสนอแนะอื่นๆ" (open-text feedback) cleaning: drop non-answers and generic one-word praise
+// (customers very often just type "ดี", "อร่อย", etc. with no actionable content), then group
+// identical remaining phrases together so recurring actionable themes surface to the top.
 const FEEDBACK_BLACKLIST = new Set([
-  '-','.','..','...','ไม่มี','ไม่มีค่ะ','ไม่มีครับ','ไม่มีคะ','ไม่มีนะคะ','ยังไม่มี',
-  'ไม่มีความคิดเห็น','ไม่มีค่ะขอบคุณค่ะ','no','none','na','n/a','nothing','-ค่ะ','-ครับ','ok','โอเค','x'
+  // non-answers / placeholders
+  '-','.','..','...','....','…','x','1','a','*','/',':)','na','n/a','no','none','nothing','ok',
+  'ไม่มี','ไม่มีค่ะ','ไม่มีครับ','ไม่มีคะ','ไม่มีนะคะ','ยังไม่มี','ไม่มีจ้า','ไม่ม่','ไม่ที','ไม่มีค่า',
+  'ไม่มีข้อเสนอแนะ','ไม่มีความคิดเห็น','ไม่มีค่ะขอบคุณค่ะ','โอเค','ครับ','บ่','-ค่ะ','-ครับ','ไมามี','non','nope','555',
+  // generic one-word praise with no specific, actionable content
+  'ดี','ดีค่ะ','ดีครับ','ดีคะ','ดีมาก','ดีมากๆ','ดีแล้ว','ดีแล้วค่ะ','ดีทุกอย่าง','ดีๆ','ดีค่ั','ดีจ้า','ดีนะ',
+  'อร่อย','อร่อยค่ะ','อร่อยครับ','อร่อยมาก','อร่อยมากค่ะ','อร่อยมากครับ','อร่อยสุดๆ','อร่อยจัง','อาหารอร่อย','อาหารอร่อยมาก',
+  'เริ่ด','เยี่ยม','ชอบ','good','goodgood','love','nice','great','perfect','excellent',
 ]);
 function cleanFeedbackList(custArr){
   const counter = {};
@@ -809,7 +834,10 @@ function cleanFeedbackList(custArr){
     respondents++;
     const norm = t.toLowerCase().replace(/\s+/g,'');
     if(FEEDBACK_BLACKLIST.has(norm)) return;
-    if(t.replace(/[.\-\s]/g,'').length < 1) return;
+    if(t.replace(/[.\-\s]/g,'').length < 2) return;
+    // regex fallback: standalone "ดี.../อร่อย..." praise with no other topic word attached
+    if(/^ดี(ค่ะ|ครับ|คะ|จ้า|จัง|มาก|ๆ|เลย|แล้ว|จริงๆ|สุดๆ|นะ|นะคะ|คับ)*$/.test(norm)) return;
+    if(/^(อาหาร)?อร่อย(ค่ะ|ครับ|คะ|จ้า|จัง|มาก|ๆ|เลย|จริง|จริงๆ|สุดๆ|นะ|คับ)*$/.test(norm)) return;
     counter[t] = (counter[t]||0) + 1;
   });
   const list = Object.entries(counter).sort((a,b)=>b[1]-a[1]);
@@ -1577,7 +1605,7 @@ function updateAll(){
   const tierLabels = Object.keys(DATA.tier_counts);
   makeOrUpdate('chartTier', {
     type:'bar',
-    data:{ labels:tierLabels, datasets:[{ data:tierLabels.map(t=>DATA.tier_counts[t]), backgroundColor:COLORS.gold, borderRadius:4 }] },
+    data:{ labels:tierLabels.map(l=>wrapLabel(l,16)), datasets:[{ data:tierLabels.map(t=>DATA.tier_counts[t]), backgroundColor:COLORS.gold, borderRadius:4 }] },
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, layout:{padding:{right:60}},
       plugins:{legend:{display:false}, valueLabels:{mode:'share'}},
       scales:{ x:{grid:{color:COLORS.grid}}, y:{grid:{display:false}} } }
@@ -1646,7 +1674,7 @@ function updateAll(){
   const promoLabels = DATA.promo_top.map(p=>p[0]);
   makeOrUpdate('chartPromo', {
     type:'bar',
-    data:{ labels:promoLabels, datasets:[{ data:DATA.promo_top.map(p=>p[1]), backgroundColor:COLORS.gold, borderRadius:4 }] },
+    data:{ labels:promoLabels.map(l=>wrapLabel(l,20)), datasets:[{ data:DATA.promo_top.map(p=>p[1]), backgroundColor:COLORS.gold, borderRadius:4 }] },
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, layout:{padding:{right:90}},
       plugins:{legend:{display:false}, valueLabels:{mode:'share', total:DATA.kpi.total_members}},
       scales:{ x:{grid:{color:COLORS.grid}}, y:{grid:{display:false}} } }
@@ -1657,7 +1685,7 @@ function updateAll(){
     const labels = Object.keys(obj);
     makeOrUpdate(id, {
       type:'bar',
-      data:{ labels, datasets:[{ data:labels.map(l=>obj[l]), backgroundColor:color, borderRadius:4 }] },
+      data:{ labels:labels.map(l=>wrapLabel(l,18)), datasets:[{ data:labels.map(l=>obj[l]), backgroundColor:color, borderRadius:4 }] },
       options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, layout:{padding:{right:70}},
         plugins:{legend:{display:false}, valueLabels:{mode:'share', total}},
         scales:{ x:{grid:{color:COLORS.grid}}, y:{grid:{display:false}, ticks:{font:{size:10.5}}} } }
@@ -1801,18 +1829,21 @@ function renderBranchComparison(mFrom, mTo){
   const cb = CMP.branches;
   const branchColor = b => PALETTE[BRANCH_ORDER.indexOf(b) % PALETTE.length];
 
-  // Branch distribution donut: always all branches (incl. ราชพฤกษ์), filtered by month only —
+  // Branch distribution bar chart: always all branches (incl. ราชพฤกษ์), filtered by month only —
   // intentionally independent of the main branch filter, consistent with the rest of this page.
+  // Sorted descending so the busiest branch reads first.
   try{
     const custMonthOnly = RAW.cust.filter(c => c.reg_month && c.reg_month>=mFrom && c.reg_month<=mTo);
     const branchCountsAll = {};
     custMonthOnly.forEach(c => { const b = c.สาขา_clean || 'ไม่ระบุ'; branchCountsAll[b] = (branchCountsAll[b]||0)+1; });
-    const branchLabelsAll = Object.keys(branchCountsAll);
+    const branchLabelsAll = Object.entries(branchCountsAll).sort((a,b)=>b[1]-a[1]).map(([k])=>k);
     makeOrUpdate('chartBranch', {
-      type:'doughnut',
+      type:'bar',
       data:{ labels:branchLabelsAll, datasets:[{ data:branchLabelsAll.map(b=>branchCountsAll[b]),
-        backgroundColor: branchLabelsAll.map((b,i)=>PALETTE[i%PALETTE.length]) }] },
-      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:legendBottom, valueLabels:{mode:'share'} }, cutout:'62%' }
+        backgroundColor: branchLabelsAll.map((b,i)=>PALETTE[i%PALETTE.length]), borderRadius:4 }] },
+      options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, layout:{padding:{right:70}},
+        plugins:{ legend:{display:false}, valueLabels:{mode:'share'} },
+        scales:{ x:{grid:{color:COLORS.grid}}, y:{grid:{display:false}} } }
     });
   } catch(err){ console.error('chartBranch (page4) render failed:', err); }
 
@@ -1839,24 +1870,11 @@ function renderBranchComparison(mFrom, mTo){
       });
     } catch(err){ console.error(id+' render failed:', err); }
   }
-  const ZONE_SHORT = {
-    'บางนา สวนหลวง ลาดกระบัง':'บางนา/สวนหลวง',
-    'ปทุมวัน บางรัก ราชเทวี':'ปทุมวัน/บางรัก',
-    'ปริมณฑล':'ปริมณฑล',
-    'วัฒนา คลองเตย พระโขนง':'วัฒนา/คลองเตย',
-    'รัชดา ลาดพร้าว ห้วยขวาง':'รัชดา/ลาดพร้าว',
-    'ธนบุรี คลองสาน บางกอกน้อย บางกอกใหญ่ บางพลัด':'ธนบุรีฝั่งตะวันตก',
-    'จตุจักร บางเขน พหลโยธิน':'จตุจักร/บางเขน',
-    'ต่างจังหวัด':'ต่างจังหวัด',
-    'มีนบุรี บางกะปิ รามคำแหง':'มีนบุรี/บางกะปิ',
-    'บางแค หนองแขม ภาษีเจริญ':'บางแค/หนองแขม',
-    'ดอนเมือง สายไหม สะพานสูง':'ดอนเมือง/สายไหม',
-    'พื้นที่อื่นๆ (ระบุเอง)':'อื่นๆ',
-  };
+  const wrapped = (labels) => labels.map(l => wrapLabel(l, 16));
 
   // --- Residence ---
   groupedBar('chartCmpResidence', CMP.residenceLabels, (b,cat)=>CMP.perBranch[b].residence.pct[cat]||0, true,
-    CMP.residenceLabels.map(z => ZONE_SHORT[z] || z));
+    wrapped(CMP.residenceLabels));
   document.getElementById('cmpResidenceCards').innerHTML = cb.map(b=>{
     const p = CMP.perBranch[b];
     const top = Object.entries(p.residence.pct).sort((a,b2)=>b2[1]-a[1])[0];
@@ -1891,7 +1909,8 @@ function renderBranchComparison(mFrom, mTo){
   }
 
   // --- Impression ---
-  groupedBar('chartCmpImpression', CMP.impressionLabels, (b,cat)=>CMP.perBranch[b].impression.pct[cat]||0, true);
+  groupedBar('chartCmpImpression', CMP.impressionLabels, (b,cat)=>CMP.perBranch[b].impression.pct[cat]||0, true,
+    wrapped(CMP.impressionLabels));
   {
     const lines = cb.map(b=>{
       const top = Object.entries(CMP.perBranch[b].impression.pct).sort((a,b2)=>b2[1]-a[1])[0];
@@ -1901,7 +1920,8 @@ function renderBranchComparison(mFrom, mTo){
   }
 
   // --- Channel ---
-  groupedBar('chartCmpChannel', CMP.channelLabels, (b,cat)=>CMP.perBranch[b].channel.pct[cat]||0, true);
+  groupedBar('chartCmpChannel', CMP.channelLabels, (b,cat)=>CMP.perBranch[b].channel.pct[cat]||0, true,
+    wrapped(CMP.channelLabels));
   {
     const lines = cb.map(b=>{
       const top = Object.entries(CMP.perBranch[b].channel.pct).sort((a,b2)=>b2[1]-a[1])[0];

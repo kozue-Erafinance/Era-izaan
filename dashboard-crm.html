@@ -636,7 +636,6 @@ const GID_USAGE = '185787951';
 const csvUrl = (gid) => `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${gid}`;
 const BRANCH_ORDER = ['ทองหล่อ','สุรวงศ์','บางนา','สะพานควาย','ราชพฤกษ์'];
 const BKK_GEO = JSON.parse(document.getElementById('bkk-geo-data').textContent);
-const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // auto-refresh every 5 minutes
 
 const COLORS = {
   gold:'#C2872A', jade:'#4C7A57', maroon:'#A6402F', indigo:'#385D82',
@@ -732,14 +731,18 @@ function splitMulti(values){
     const seen = new Set();
     s.split(',').forEach(p=>{
       let key = p.trim();
-      if(!key || key==='-') return;
+      if(!key || key==='-' || key==='.' || key==='..' || key==='...') return;
       const low = key.toLowerCase();
       if(low==='ig') key='IG';
-      else if(low==='taxi') key='Taxi';
+      else if(low==='taxi' || key==='แท็กซี่') key='Taxi';
       else if(low==='tiktok') key='Tiktok';
       else if(low==='facebook') key='Facebook';
       else if(low==='google map') key='Google map';
       else if(key==='เพื่อน') key='เพื่อนแนะนำ';
+      else if(['รถ','ส่วนตัว','รถยนต์','รถยนต์ส่วนตัว','รถยน','ขับรถ','ขับรถมา'].includes(key) || low==='car') key='รถส่วนตัว';
+      else if(['รถสาธารณะ','ขนส่ง','สาธารณะ','รถไฟฟ้า','บีทีเอส'].includes(key) || low==='bts' || low==='mrt') key='ขนส่งสาธารณะ';
+      else if(key==='แกรป' || low==='grab' || low==='bolt') key='Taxi';
+      else if(key==='เดินมา') key='เดิน';
       if(seen.has(key)) return;
       seen.add(key);
       counter[key] = (counter[key]||0) + 1;
@@ -1720,7 +1723,7 @@ function updateAll(){
   renderExecSummary();
 
   document.getElementById('cleaningNotes').innerHTML = `
-    <li>ข้อมูลนี้ดึงสดจาก Google Sheets โดยตรง (2 ชีท: รายงานข้อมูลลูกค้า และ รายงานการใช้งาน) ทุกครั้งที่เปิดหน้านี้ และรีเฟรชอัตโนมัติทุก 5 นาที</li>
+    <li>ข้อมูลนี้ดึงสดจาก Google Sheets โดยตรง (2 ชีท: รายงานข้อมูลลูกค้า และ รายงานการใช้งาน) ทุกครั้งที่เปิดหน้านี้ หรือกดปุ่ม "รีเฟรชข้อมูล" — ไม่มีการรีเฟรชอัตโนมัติระหว่างเปิดหน้าค้างไว้</li>
     <li>ทุกการ์ด/กราฟในหน้านี้กรองตามสาขาและช่วงเดือนที่เลือกด้านบน — ตัวเลข "สัดส่วน %" คำนวณจากฐานของกลุ่มที่กรองแล้ว ไม่ใช่ฐานสมาชิกทั้งหมด</li>
     <li>ลบธุรกรรมที่มีค่าผิดปกติ (แต้มเพิ่ม/ลด สูงเกิน 5,000 แต้มต่อครั้ง) จำนวน ${DATA.kpi.n_outliers_removed} รายการ${DATA.kpi.outlier_names.length? ` จากบัญชี "${DATA.kpi.outlier_names.join(', ')}"`:''} ออกจากทั้งชุดข้อมูลก่อนกรองตามฟิลเตอร์ (เป็นการทำความสะอาดข้อมูล ไม่ใช่ตัวกรอง)</li>
     <li>ตัวเลขพฤติกรรมการซื้อ (ความถี่, ลูกค้าใหม่/ซื้อซ้ำ, CLV, RFM, Customer Journey) นับเฉพาะธุรกรรมประเภท "แลกแต้มด้วยเบอร์โทร" (add-by-phone) ที่ผูกกับยอดขายจริง ไม่รวมธุรกรรม "สมัครสมาชิก" หรือ "แลกโปรโมชัน" ที่ไม่ใช่การซื้อ</li>
@@ -1877,11 +1880,14 @@ function renderBranchComparison(mFrom, mTo){
     wrapped(CMP.residenceLabels));
   document.getElementById('cmpResidenceCards').innerHTML = cb.map(b=>{
     const p = CMP.perBranch[b];
-    const top = Object.entries(p.residence.pct).sort((a,b2)=>b2[1]-a[1])[0];
+    const top3 = Object.entries(p.residence.pct).sort((a,b2)=>b2[1]-a[1]).slice(0,3);
+    const rows = top3.map(([name,pct])=>`
+      <div class="brow"><span>${name}</span><b>${pct}%</b></div>
+      <div class="bbar"><div class="bbar-fill" style="width:${pct}%; background:${branchColor(b)}"></div></div>`).join('')
+      || `<div class="brow"><span style="color:var(--ink-faint);">ไม่มีข้อมูล</span></div>`;
     return `<div class="branch-stat-card">
       <div class="bname" style="color:${branchColor(b)}">${b}</div>
-      <div class="brow"><span>${top?top[0]:'-'}</span><b>${top?top[1]:0}%</b></div>
-      <div class="bbar"><div class="bbar-fill" style="width:${top?top[1]:0}%; background:${branchColor(b)}"></div></div>
+      ${rows}
     </div>`;
   }).join('');
   {
@@ -1953,13 +1959,13 @@ function renderBranchComparison(mFrom, mTo){
   // --- Feedback by branch ---
   document.getElementById('cmpFeedbackCards').innerHTML = cb.map(b=>{
     const fb = CMP.perBranch[b].feedback;
-    const rows = fb.list.slice(0,8).map(([text,count])=>`
+    const rows = fb.list.slice(0,30).map(([text,count])=>`
       <div class="brow" style="align-items:flex-start;"><span style="flex:1; padding-right:8px;">${text}</span><b style="white-space:nowrap;">${count}</b></div>`).join('')
       || `<div class="brow"><span style="color:var(--ink-faint);">ไม่มีข้อเสนอแนะ</span></div>`;
     return `<div class="branch-stat-card">
       <div class="bname" style="color:${branchColor(b)}">${b}</div>
       <div style="font-size:10.5px; color:var(--ink-faint); margin-bottom:8px;">จากผู้ตอบ ${fmtNum(fb.respondents)} คน</div>
-      ${rows}
+      <div style="max-height:260px; overflow-y:auto; padding-right:4px;">${rows}</div>
     </div>`;
   }).join('');
 }
@@ -2048,7 +2054,6 @@ loadLibrary(CHART_URLS).then(()=>{
 
 loadLibrary(PAPA_URLS).then(()=>{
   loadData(false);
-  setInterval(()=>loadData(false), REFRESH_INTERVAL_MS);
 }).catch(()=>{
   setStatus('⚠️ โหลดไลบรารีไม่สำเร็จ');
   showError('โหลดไลบรารี PapaParse (สำหรับอ่านข้อมูล CSV) ไม่สำเร็จจากทุก CDN ที่ลอง กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต หรือปิดตัวบล็อกโฆษณา/สคริปต์ชั่วคราวแล้วรีเฟรชหน้านี้ใหม่');

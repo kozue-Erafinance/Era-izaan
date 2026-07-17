@@ -160,7 +160,14 @@
   .grid-2{ grid-template-columns:2fr 1fr; }
   .grid-3{ grid-template-columns:repeat(3,1fr); }
   .grid-4{ grid-template-columns:repeat(4,1fr); }
-  @media(max-width:900px){ .grid-2,.grid-3,.grid-4{ grid-template-columns:1fr; } }
+  @media(max-width:900px){
+    /* !important is required here because several rows use inline grid-template-columns
+       (content-proportional layouts like "1.6fr 1fr") which would otherwise win over
+       a plain class rule. On phones every card must stack in a single column. */
+    .grid{ grid-template-columns:1fr !important; }
+    .kpi-grid{ grid-template-columns:1fr !important; }
+    canvas{ max-height:280px !important; }
+  }
 
   .card{
     background:var(--panel); border:1px solid var(--panel-line); border-radius:var(--radius);
@@ -237,6 +244,15 @@
     background:#FBF3E1; border:1px solid #E3C387; color:#8A5A1E; border-radius:10px;
     padding:12px 18px; font-size:12.5px; line-height:1.7; margin-bottom:24px;
   }
+  .branch-stat-card{
+    background:var(--panel-alt); border:1px solid var(--panel-line); border-radius:10px;
+    padding:12px 14px;
+  }
+  .branch-stat-card .bname{ font-weight:600; font-size:13px; margin-bottom:8px; }
+  .branch-stat-card .brow{ display:flex; justify-content:space-between; font-size:11.5px; color:var(--ink-muted); margin-bottom:5px; }
+  .branch-stat-card .brow b{ color:var(--ink); }
+  .branch-stat-card .bbar{ height:5px; border-radius:3px; background:var(--panel-line); margin-bottom:8px; overflow:hidden; }
+  .branch-stat-card .bbar-fill{ height:100%; border-radius:3px; }
 </style>
 </head>
 <body>
@@ -284,6 +300,7 @@
     <button class="tabbtn active" data-page="1">01 · Customer Overview</button>
     <button class="tabbtn" data-page="2">02 · Customer Behavior &amp; Value</button>
     <button class="tabbtn" data-page="3">03 · Loyalty &amp; Marketing</button>
+    <button class="tabbtn" data-page="4">04 · Branch Comparison</button>
   </div>
 
   <div class="page" data-page="1">
@@ -362,7 +379,13 @@
         <p class="cardnote" style="margin-top:14px;">เขตที่ไม่มีสีบนแผนที่ไม่ได้อยู่ในตัวเลือกโซนมาตรฐานของแบบสอบถาม จึงไม่มีข้อมูลจำนวนสมาชิกแยกเฉพาะเขต</p>
       </div>
     </div>
-    <div class="grid" style="grid-template-columns:1fr; margin-bottom:16px;">
+    <div class="grid" style="grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+      <div class="card">
+        <h3>สัดส่วนพื้นที่: ในเขต vs นอกเขตพื้นที่สาขา</h3>
+        <p class="cardnote">ในเขต = ทำเลที่พักตรงกับเขตของสาขา (ทองหล่อ→วัฒนา, สุรวงศ์→บางรัก, สะพานควาย→พญาไท, บางนา→บางนา)</p>
+        <canvas id="chartAreaSplit"></canvas>
+        <div class="unavailable-note" style="margin-top:10px; padding:10px 12px; font-size:11px;">หมายเหตุ: แบบสอบถามให้เลือกทำเลเป็นกลุ่มเขต (เช่น "วัฒนา คลองเตย พระโขนง" รวมกัน) จึงระบุแยกเฉพาะเขตวัฒนาไม่ได้ 100% ตัวเลขนี้จึงเป็นค่าประมาณจากคำตอบที่มีคำว่าเขตนั้นปรากฏอยู่ · ไม่มีข้อมูลเขตของสาขาราชพฤกษ์</div>
+      </div>
       <div class="card">
         <h3>Top 10 ทำเลที่พักอาศัยของสมาชิก</h3>
         <p class="cardnote">Top 10 Residence Zones (ตอบได้มากกว่า 1)</p>
@@ -521,6 +544,58 @@
 
   </div><!-- /page 3 -->
 
+  <div class="page" data-page="4" style="display:none;">
+
+  <!-- SECTION 4: Branch Comparison -->
+  <section>
+    <div class="section-head">
+      <span class="section-num">04</span>
+      <h2 class="section-title">สรุปเปรียบเทียบรายสาขา</h2>
+      <span class="section-desc">Branch Comparison — ไม่รวมสาขาราชพฤกษ์</span>
+    </div>
+    <div class="unavailable-note" style="margin-bottom:16px;">หน้านี้เปรียบเทียบทั้ง 4 สาขา (ทองหล่อ, สุรวงศ์, บางนา, สะพานควาย) เสมอ โดยไม่ขึ้นกับตัวกรองสาขาด้านบน (แต่ยังกรองตามช่วงเดือนที่เลือกอยู่) — ไม่รวมราชพฤกษ์ตามที่ระบุไว้ ตัวเลข % คำนวณจากฐานผู้ตอบแบบสอบถามของแต่ละสาขาเอง ไม่ใช่ฐานรวมทุกสาขา</div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <h3>ที่อยู่อาศัยของลูกค้าตามสาขา</h3>
+      <p class="cardnote">Customer Residence by Branch (Top 8 โซน, % ของผู้ตอบในแต่ละสาขา)</p>
+      <canvas id="chartCmpResidence" style="max-height:360px;"></canvas>
+      <div class="grid grid-4" id="cmpResidenceCards" style="margin-top:14px;"></div>
+      <p id="cmpResidenceInsight" class="cardnote" style="margin-top:12px; color:var(--ink-muted);"></p>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <h3>การเดินทาง</h3>
+      <p class="cardnote">Mode of Travel by Branch</p>
+      <canvas id="chartCmpTravel" style="max-height:300px;"></canvas>
+      <div class="grid grid-4" id="cmpTravelCards" style="margin-top:14px;"></div>
+      <p id="cmpTravelInsight" class="cardnote" style="margin-top:12px; color:var(--ink-muted);"></p>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <h3>สิ่งที่ประทับใจ</h3>
+      <p class="cardnote">What Customers Love by Branch</p>
+      <canvas id="chartCmpImpression" style="max-height:320px;"></canvas>
+      <p id="cmpImpressionInsight" class="cardnote" style="margin-top:12px; color:var(--ink-muted);"></p>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <h3>รู้จักร้านจากช่องทางไหน</h3>
+      <p class="cardnote">Acquisition Channel by Branch</p>
+      <canvas id="chartCmpChannel" style="max-height:300px;"></canvas>
+      <p id="cmpChannelInsight" class="cardnote" style="margin-top:12px; color:var(--ink-muted);"></p>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <h3>Customer by Generation</h3>
+      <p class="cardnote">ลูกค้าแยกตาม Generation รายสาขา</p>
+      <canvas id="chartCmpGeneration" style="max-height:320px;"></canvas>
+      <div class="grid grid-4" id="cmpGenerationCards" style="margin-top:14px;"></div>
+      <p id="cmpGenerationInsight" class="cardnote" style="margin-top:12px; color:var(--ink-muted);"></p>
+    </div>
+  </section>
+
+  </div><!-- /page 4 -->
+
 </main>
 
 <div class="mudmee"></div>
@@ -673,6 +748,29 @@ const PREDEFINED_ZONES = new Set([
   'จตุจักร บางเขน พหลโยธิน','ต่างจังหวัด','มีนบุรี บางกะปิ รามคำแหง',
   'บางแค หนองแขม ภาษีเจริญ','ดอนเมือง สายไหม สะพานสูง'
 ]);
+// "In service area" = the 9 Bangkok zones mapped to actual khets near the branches.
+// ปริมณฑล (surrounding provinces) and ต่างจังหวัด (other provinces) count as outside.
+// "In service area" = residence answer mentions the specific district tied to a branch:
+// ทองหล่อ→วัฒนา, สุรวงศ์→บางรัก, สะพานควาย→พญาไท, บางนา→บางนา.
+// (ราชพฤกษ์ has no district mapping provided, so it isn't represented in this split.)
+// Matching is by substring on the raw answer text, since the survey's own checkbox options
+// bundle several khets under one label (e.g. "วัฒนา คลองเตย พระโขนง") — this is the closest
+// available precision; see the caveat note shown next to the chart.
+const BRANCH_SERVICE_KEYWORDS = ['วัฒนา','บางรัก','พญาไท','บางนา'];
+
+// Generation buckets (based on raw age in years, not the pre-binned 5-year ranges)
+const GEN_ORDER = ['Gen Alpha (0-13)','Gen Z (14-29)','Gen Y / Millennials (30-45)','Gen X (46-60)','Baby Boomer+ (61+)'];
+function genBucket(age){
+  if(age===null || age===undefined || isNaN(age) || age < 0 || age > 105) return null; // exclude invalid/garbage ages
+  if(age <= 13) return 'Gen Alpha (0-13)';
+  if(age <= 29) return 'Gen Z (14-29)';
+  if(age <= 45) return 'Gen Y / Millennials (30-45)';
+  if(age <= 60) return 'Gen X (46-60)';
+  return 'Baby Boomer+ (61+)';
+}
+
+// Branches compared on the Branch Comparison page (Ratchaphruek excluded per request)
+const COMPARE_BRANCHES = BRANCH_ORDER.filter(b => b !== 'ราชพฤกษ์');
 const AGE_ORDER = ['<18','15-19','20-24','25-29','30-34','35-39','40-44','45-49','50-54','55-59','60-64','65-69','70-74','75-79'];
 const SPEND_BINS = [
   {max:1, label:'0 (ยังไม่ซื้อ/ไม่บันทึก)'},
@@ -697,6 +795,7 @@ function parseRawData(custRows, usageRows){
       เพศ_clean: cleanGender(r['เพศ']),
       กลุ่มสมาชิก_clean: (r['ชื่อกลุ่มสมาชิก'] && String(r['ชื่อกลุ่มสมาชิก']).trim()) || 'ไม่มีกลุ่ม',
       ช่วงอายุ: r['ช่วงอายุ'] ? String(r['ช่วงอายุ']).trim() : null,
+      อายุ_num: (r['อายุ']!==undefined && r['อายุ']!==null && String(r['อายุ']).trim()!=='') ? num(r['อายุ']) : null,
       regDt, lastDt,
       reg_month: toMonthKey(regDt),
       คะแนนคงเหลือ: num(r['คะแนนคงเหลือ']),
@@ -763,10 +862,14 @@ function computeAggregates(custF, usageF, NOW, outlierMeta){
   const gender_counts = {};
   custF.forEach(c => { gender_counts[c.เพศ_clean] = (gender_counts[c.เพศ_clean]||0)+1; });
 
+  // Generation buckets (based on raw age in years, not the pre-binned 5-year ranges)
   const ageRaw = {};
-  custF.forEach(c => { if(c.ช่วงอายุ) ageRaw[c.ช่วงอายุ] = (ageRaw[c.ช่วงอายุ]||0)+1; });
+  custF.forEach(c => {
+    const g = genBucket(c.อายุ_num);
+    if(g) ageRaw[g] = (ageRaw[g]||0)+1;
+  });
   const age_counts = {};
-  AGE_ORDER.forEach(a => { if(ageRaw[a]!==undefined) age_counts[a] = ageRaw[a]; });
+  GEN_ORDER.forEach(a => { if(ageRaw[a]!==undefined) age_counts[a] = ageRaw[a]; });
 
   const recencyOrder = ['0-30 วัน','31-90 วัน','91-180 วัน','181-365 วัน','มากกว่า 365 วัน','ไม่เคยใช้งาน'];
   const recencyRaw = {};
@@ -807,6 +910,19 @@ function computeAggregates(custF, usageF, NOW, outlierMeta){
   });
   if(otherTotal) residence_counts['พื้นที่อื่นๆ (ระบุเอง)'] = otherTotal;
   const residence_n = residenceSplit.respondents;
+
+  // In-area vs out-of-area split (based on distinct respondents who answered the question)
+  let inAreaResp = 0, outAreaResp = 0;
+  custF.forEach(c=>{
+    const raw = c.พักอยู่อาศัยแถวไหน;
+    if(!raw) return;
+    const s = String(raw).trim();
+    if(!s || s==='-' || s==='ไม่มี') return;
+    const isInArea = BRANCH_SERVICE_KEYWORDS.some(kw => s.includes(kw));
+    if(isInArea) inAreaResp++;
+    else outAreaResp++;
+  });
+  const area_split = { 'ในเขตพื้นที่สาขา':inAreaResp, 'นอกเขตพื้นที่สาขา':outAreaResp };
 
   // ---- spend distribution & top spenders ----
   const spend_bin_counts = {};
@@ -1015,12 +1131,57 @@ function computeAggregates(custF, usageF, NOW, outlierMeta){
     channel_n: channelSplit.respondents, impression_n: impressionSplit.respondents, travel_n: travelSplit.respondents,
     residence_counts: sortObjDesc(residence_counts), residence_n,
     txn_type_counts, pts_trend, sales_trend, promo_top,
-    new_vs_returning, visit_by_dow, visit_by_daypart, rfm_segments, customer_journey,
+    new_vs_returning, visit_by_dow, visit_by_daypart, rfm_segments, customer_journey, area_split,
     branch_order: BRANCH_ORDER, bkk_map,
   };
 }
 
-// ===================== RENDERING (unchanged shape from DATA) =====================
+// ==================== BRANCH COMPARISON (page 4) ====================
+// Independent of the branch filter (always compares all branches except ราชพฤกษ์),
+// but still respects the selected month range so it stays consistent with the rest of the dashboard.
+function computeBranchComparison(RAW, mFrom, mTo){
+  const perBranch = {};
+  COMPARE_BRANCHES.forEach(b=>{
+    const custB = RAW.cust.filter(c => c.สาขา_clean===b && c.reg_month && c.reg_month>=mFrom && c.reg_month<=mTo);
+    const n = custB.length;
+
+    function pctSplit(field){
+      const sp = splitMulti(custB.map(c=>c[field]));
+      const pct = {};
+      Object.entries(sp.counter).forEach(([k,v])=>{ pct[k] = sp.respondents ? Math.round(v/sp.respondents*1000)/10 : 0; });
+      return { pct, respondents: sp.respondents, counter: sp.counter };
+    }
+    const residence = pctSplit('พักอยู่อาศัยแถวไหน');
+    const travel = pctSplit('เดินทางมาร้านด้วยวิธีไหน');
+    const impression = pctSplit('สิ่งที่ประทับใจในร้าน');
+    const channel = pctSplit('รู้จักร้านจากช่องทางไหน');
+
+    const genRaw = {}; let genTotal = 0;
+    custB.forEach(c=>{ const g = genBucket(c.อายุ_num); if(g){ genRaw[g]=(genRaw[g]||0)+1; genTotal++; } });
+    const genPct = {};
+    GEN_ORDER.forEach(g => genPct[g] = genTotal ? Math.round((genRaw[g]||0)/genTotal*1000)/10 : 0);
+
+    perBranch[b] = { n, residence, travel, impression, channel, genPct, genTotal };
+  });
+
+  // top N category labels across all compared branches (by combined respondent count), for consistent chart axes
+  function topLabels(field, n){
+    const combined = {};
+    COMPARE_BRANCHES.forEach(b => Object.entries(perBranch[b][field].counter).forEach(([k,v])=>{ combined[k]=(combined[k]||0)+v; }));
+    return Object.entries(combined).sort((a,b)=>b[1]-a[1]).slice(0,n).map(([k])=>k);
+  }
+
+  return {
+    branches: COMPARE_BRANCHES,
+    perBranch,
+    residenceLabels: topLabels('residence', 8),
+    travelLabels: topLabels('travel', 5),
+    impressionLabels: topLabels('impression', 6),
+    channelLabels: topLabels('channel', 5),
+  };
+}
+
+
 let RAW = null;   // { cust, usageClean, NOW, n_outliers_removed, outlier_names } — unfiltered, cleaned rows
 let DATA = null;  // aggregates computed from the currently filtered subset of RAW
 
@@ -1490,6 +1651,7 @@ function updateAll(){
   `;
 
   renderBkkMap();
+  renderBranchComparison(mFrom, mTo);
 }
 
 function renderBkkMap(){
@@ -1556,6 +1718,120 @@ function renderBkkMap(){
       <td class="num">${fmtNum(count)}</td>
       <td class="num">${resTotalRespondents ? (count/resTotalRespondents*100).toFixed(1) : '0.0'}%</td>
     </tr>`).join('');
+
+  // Area split: in-service-area vs out-of-area
+  try{
+    const areaLabels = Object.keys(DATA.area_split);
+    makeOrUpdate('chartAreaSplit', {
+      type:'doughnut',
+      data:{ labels:areaLabels, datasets:[{ data:areaLabels.map(l=>DATA.area_split[l]), backgroundColor:[COLORS.jade, COLORS.maroon] }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:legendBottom, valueLabels:{mode:'share'} }, cutout:'58%' }
+    });
+  } catch(err){ console.error('chartAreaSplit render failed:', err); }
+}
+
+// ==================== BRANCH COMPARISON PAGE ====================
+function renderBranchComparison(mFrom, mTo){
+  if(!RAW) return;
+  const CMP = computeBranchComparison(RAW, mFrom, mTo);
+  const cb = CMP.branches;
+  const branchColor = b => PALETTE[BRANCH_ORDER.indexOf(b) % PALETTE.length];
+
+  function groupedBar(id, categories, getPct, horizontal){
+    const datasets = cb.map(b=>({
+      label:b,
+      data: categories.map(cat => getPct(b, cat)),
+      backgroundColor: branchColor(b),
+      borderRadius:3
+    }));
+    try{
+      makeOrUpdate(id, {
+        type:'bar',
+        data:{ labels:categories, datasets },
+        options:{ indexAxis: horizontal?'y':'x', responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:legendBottom, tooltip:{ callbacks:{ label:(ctx)=>`${ctx.dataset.label}: ${ctx.parsed[horizontal?'x':'y']}%` } } },
+          scales: horizontal
+            ? { x:{ grid:{color:COLORS.grid}, ticks:{callback:v=>v+'%'} }, y:{ grid:{display:false}, ticks:{font:{size:10.5}} } }
+            : { x:{ grid:{display:false} }, y:{ grid:{color:COLORS.grid}, ticks:{callback:v=>v+'%'} } }
+        }
+      });
+    } catch(err){ console.error(id+' render failed:', err); }
+  }
+
+  // --- Residence ---
+  groupedBar('chartCmpResidence', CMP.residenceLabels, (b,cat)=>CMP.perBranch[b].residence.pct[cat]||0, true);
+  document.getElementById('cmpResidenceCards').innerHTML = cb.map(b=>{
+    const p = CMP.perBranch[b];
+    const top = Object.entries(p.residence.pct).sort((a,b2)=>b2[1]-a[1])[0];
+    return `<div class="branch-stat-card">
+      <div class="bname" style="color:${branchColor(b)}">${b}</div>
+      <div class="brow"><span>${top?top[0]:'-'}</span><b>${top?top[1]:0}%</b></div>
+      <div class="bbar"><div class="bbar-fill" style="width:${top?top[1]:0}%; background:${branchColor(b)}"></div></div>
+    </div>`;
+  }).join('');
+  {
+    const lines = cb.map(b=>{
+      const p = CMP.perBranch[b];
+      const top = Object.entries(p.residence.pct).sort((a,b2)=>b2[1]-a[1])[0];
+      return top ? `<b>${b}</b> — ${top[0]} มากที่สุด (${top[1]}%)` : '';
+    }).filter(Boolean);
+    document.getElementById('cmpResidenceInsight').innerHTML = lines.join(' &nbsp;·&nbsp; ');
+  }
+
+  // --- Travel ---
+  groupedBar('chartCmpTravel', CMP.travelLabels, (b,cat)=>CMP.perBranch[b].travel.pct[cat]||0, false);
+  document.getElementById('cmpTravelCards').innerHTML = cb.map(b=>{
+    const p = CMP.perBranch[b].travel.pct;
+    const rows = CMP.travelLabels.slice(0,3).map(l=>`
+      <div class="brow"><span>${l}</span><b>${p[l]||0}%</b></div>
+      <div class="bbar"><div class="bbar-fill" style="width:${p[l]||0}%; background:${branchColor(b)}"></div></div>`).join('');
+    return `<div class="branch-stat-card"><div class="bname" style="color:${branchColor(b)}">${b}</div>${rows}</div>`;
+  }).join('');
+  {
+    const carDriving = cb.map(b=>[b, CMP.perBranch[b].travel.pct['รถส่วนตัว']||0]).sort((a,b2)=>b2[1]-a[1]);
+    document.getElementById('cmpTravelInsight').innerHTML = carDriving.length
+      ? `<b>${carDriving[0][0]}</b> มีลูกค้าขับรถส่วนตัวมาเองสูงสุด (${carDriving[0][1]}%) — สาขาที่มีสัดส่วนต่ำสุดคือ <b>${carDriving[carDriving.length-1][0]}</b> (${carDriving[carDriving.length-1][1]}%)` : '';
+  }
+
+  // --- Impression ---
+  groupedBar('chartCmpImpression', CMP.impressionLabels, (b,cat)=>CMP.perBranch[b].impression.pct[cat]||0, true);
+  {
+    const lines = cb.map(b=>{
+      const top = Object.entries(CMP.perBranch[b].impression.pct).sort((a,b2)=>b2[1]-a[1])[0];
+      return top ? `<b>${b}</b> — "${top[0]}" (${top[1]}%)` : '';
+    }).filter(Boolean);
+    document.getElementById('cmpImpressionInsight').innerHTML = lines.join(' &nbsp;·&nbsp; ');
+  }
+
+  // --- Channel ---
+  groupedBar('chartCmpChannel', CMP.channelLabels, (b,cat)=>CMP.perBranch[b].channel.pct[cat]||0, true);
+  {
+    const lines = cb.map(b=>{
+      const top = Object.entries(CMP.perBranch[b].channel.pct).sort((a,b2)=>b2[1]-a[1])[0];
+      return top ? `<b>${b}</b> — ${top[0]} (${top[1]}%)` : '';
+    }).filter(Boolean);
+    document.getElementById('cmpChannelInsight').innerHTML = lines.join(' &nbsp;·&nbsp; ');
+  }
+
+  // --- Generation ---
+  groupedBar('chartCmpGeneration', GEN_ORDER, (b,cat)=>CMP.perBranch[b].genPct[cat]||0, false);
+  document.getElementById('cmpGenerationCards').innerHTML = cb.map(b=>{
+    const p = CMP.perBranch[b].genPct;
+    const genZ = p['Gen Z (14-29)']||0;
+    const genYplus = (p['Gen Y / Millennials (30-45)']||0)+(p['Gen X (46-60)']||0)+(p['Baby Boomer+ (61+)']||0);
+    return `<div class="branch-stat-card">
+      <div class="bname" style="color:${branchColor(b)}">${b}</div>
+      <div class="brow"><span>Gen Z</span><b>${genZ}%</b></div>
+      <div class="bbar"><div class="bbar-fill" style="width:${genZ}%; background:${branchColor(b)}"></div></div>
+      <div class="brow"><span>Gen Y+</span><b>${genYplus.toFixed(1)}%</b></div>
+      <div class="bbar"><div class="bbar-fill" style="width:${genYplus}%; background:${branchColor(b)}"></div></div>
+    </div>`;
+  }).join('');
+  {
+    const genZRank = cb.map(b=>[b, CMP.perBranch[b].genPct['Gen Z (14-29)']||0]).sort((a,b2)=>b2[1]-a[1]);
+    document.getElementById('cmpGenerationInsight').innerHTML = genZRank.length
+      ? `ทุกสาขามีฐานลูกค้ากลุ่ม Gen Y (30-45) เป็นหลัก — สาขาที่มีสัดส่วน Gen Z สูงสุดคือ <b>${genZRank[0][0]}</b> (${genZRank[0][1]}%)` : '';
+  }
 }
 
 // ===================== INIT / LIVE REFRESH =====================

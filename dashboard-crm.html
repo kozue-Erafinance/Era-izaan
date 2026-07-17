@@ -293,7 +293,7 @@
   </div>
 
   <div id="branchDataWarning" class="branch-warning" style="display:none;">
-    ⚠️ ธุรกรรมการซื้อจริง (ประเภท "แลกแต้มด้วยเบอร์โทร") ในไฟล์ต้นทางไม่ได้บันทึกสาขากำกับไว้เลย มีเพียงธุรกรรม "สมัครสมาชิก" เท่านั้นที่มีสาขา — เมื่อเลือกดูรายสาขา การ์ดที่อิงกับยอดซื้อ/ความถี่การซื้อ (ยอดขาย, AOV, CLV, Purchase Frequency, New vs Returning, RFM, Customer Journey, Visit Time, Points, Coupon) จะแสดงเป็น 0 หรือว่างเปล่าทั้งหมด เพราะระบบไม่สามารถอ้างอิงได้ว่าธุรกรรมนั้นเกิดที่สาขาไหน — นี่คือช่องว่างของข้อมูลต้นทาง ไม่ใช่ข้อผิดพลาดของแดชบอร์ด กรุณาเลือก "ทั้งหมด" เพื่อดูข้อมูลยอดขาย/พฤติกรรมการซื้อ
+    ℹ️ ธุรกรรมการซื้อจริง (ประเภท "แลกแต้มด้วยเบอร์โทร") ในไฟล์ต้นทางไม่ได้บันทึกสาขากำกับไว้โดยตรง — แดชบอร์ดนี้จึงแมพผ่านเบอร์โทรศัพท์กับสาขาที่ลูกค้าคนนั้นสมัครสมาชิกไว้แทน (ครอบคลุมได้ราว 97% ของธุรกรรมซื้อ) การ์ดที่อิงยอดซื้อ/พฤติกรรม (ยอดขาย, AOV, CLV, RFM ฯลฯ) เมื่อกรองรายสาขาจึงเป็น <b>ค่าประมาณจากสาขาที่สมัครสมาชิก ไม่ใช่สาขาที่มาซื้อจริงเป๊ะ 100%</b> เพราะลูกค้าอาจไปซื้อร้านสาขาอื่นได้ — ธุรกรรมส่วนน้อยที่ไม่มีทั้งสาขาและเบอร์โทรที่แมพได้จะไม่ถูกนับในสาขาใดเลย
   </div>
 
   <div class="tabnav">
@@ -314,16 +314,11 @@
       <h2 class="section-title">ภาพรวมลูกค้า</h2>
       <span class="section-desc">Customer Overview</span>
     </div>
-    <div class="grid" style="grid-template-columns:1.6fr 1fr; gap:16px; margin-bottom:16px;">
+    <div class="grid" style="grid-template-columns:1fr; margin-bottom:16px;">
       <div class="card">
         <h3>สรุปภาพรวม</h3>
         <p class="cardnote">Executive Summary — สรุปอัตโนมัติจากข้อมูลในตัวกรองที่เลือก</p>
         <ul id="execSummary" class="exec-summary"></ul>
-      </div>
-      <div class="card">
-        <h3>สัดส่วนลูกค้าตามสาขา</h3>
-        <p class="cardnote">Customer Distribution by Branch</p>
-        <canvas id="chartBranch"></canvas>
       </div>
     </div>
     <div class="grid" style="grid-template-columns:1.7fr 1fr; gap:16px; margin-bottom:16px;">
@@ -393,6 +388,18 @@
           <thead><tr><th>#</th><th>พื้นที่ / โซน</th><th style="text-align:right">จำนวน</th><th style="text-align:right">%</th></tr></thead>
           <tbody></tbody>
         </table>
+      </div>
+    </div>
+    <div class="grid" style="grid-template-columns:1fr; margin-bottom:16px;">
+      <div class="card">
+        <h3>ข้อเสนอแนะอื่นๆ จากลูกค้า</h3>
+        <p class="cardnote" id="feedbackNote">Other Suggestions / Open Feedback — จัดกลุ่มคำตอบที่ซ้ำกัน เรียงจากพบบ่อยที่สุด (ตัดคำตอบว่างเปล่า เช่น "-", "ไม่มี" ออกแล้ว)</p>
+        <div style="max-height:340px; overflow-y:auto;">
+          <table class="data-table" id="feedbackTable">
+            <thead><tr><th style="width:36px">#</th><th>ข้อเสนอแนะ</th><th style="text-align:right; width:90px">จำนวนครั้ง</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </section>
@@ -555,10 +562,25 @@
     </div>
     <div class="unavailable-note" style="margin-bottom:16px;">หน้านี้เปรียบเทียบทั้ง 4 สาขา (ทองหล่อ, สุรวงศ์, บางนา, สะพานควาย) เสมอ โดยไม่ขึ้นกับตัวกรองสาขาด้านบน (แต่ยังกรองตามช่วงเดือนที่เลือกอยู่) — ไม่รวมราชพฤกษ์ตามที่ระบุไว้ ตัวเลข % คำนวณจากฐานผู้ตอบแบบสอบถามของแต่ละสาขาเอง ไม่ใช่ฐานรวมทุกสาขา</div>
 
+    <div class="grid" style="grid-template-columns:1.8fr 1fr; gap:16px; margin-bottom:16px;">
+      <div class="card">
+        <h3>Customer by Generation</h3>
+        <p class="cardnote">ลูกค้าแยกตาม Generation รายสาขา</p>
+        <canvas id="chartCmpGeneration" style="max-height:340px;"></canvas>
+        <p id="cmpGenerationInsight" class="cardnote" style="margin-top:12px; color:var(--ink-muted);"></p>
+      </div>
+      <div class="card">
+        <h3>สัดส่วนลูกค้าตามสาขา</h3>
+        <p class="cardnote">Customer Distribution by Branch</p>
+        <canvas id="chartBranch"></canvas>
+      </div>
+    </div>
+    <div class="grid grid-4" id="cmpGenerationCards" style="margin-bottom:16px;"></div>
+
     <div class="card" style="margin-bottom:16px;">
       <h3>ที่อยู่อาศัยของลูกค้าตามสาขา</h3>
       <p class="cardnote">Customer Residence by Branch (Top 8 โซน, % ของผู้ตอบในแต่ละสาขา)</p>
-      <canvas id="chartCmpResidence" style="max-height:360px;"></canvas>
+      <canvas id="chartCmpResidence" style="max-height:560px;"></canvas>
       <div class="grid grid-4" id="cmpResidenceCards" style="margin-top:14px;"></div>
       <p id="cmpResidenceInsight" class="cardnote" style="margin-top:12px; color:var(--ink-muted);"></p>
     </div>
@@ -566,7 +588,7 @@
     <div class="card" style="margin-bottom:16px;">
       <h3>การเดินทาง</h3>
       <p class="cardnote">Mode of Travel by Branch</p>
-      <canvas id="chartCmpTravel" style="max-height:300px;"></canvas>
+      <canvas id="chartCmpTravel" style="max-height:320px;"></canvas>
       <div class="grid grid-4" id="cmpTravelCards" style="margin-top:14px;"></div>
       <p id="cmpTravelInsight" class="cardnote" style="margin-top:12px; color:var(--ink-muted);"></p>
     </div>
@@ -574,23 +596,21 @@
     <div class="card" style="margin-bottom:16px;">
       <h3>สิ่งที่ประทับใจ</h3>
       <p class="cardnote">What Customers Love by Branch</p>
-      <canvas id="chartCmpImpression" style="max-height:320px;"></canvas>
+      <canvas id="chartCmpImpression" style="max-height:420px;"></canvas>
       <p id="cmpImpressionInsight" class="cardnote" style="margin-top:12px; color:var(--ink-muted);"></p>
     </div>
 
     <div class="card" style="margin-bottom:16px;">
       <h3>รู้จักร้านจากช่องทางไหน</h3>
       <p class="cardnote">Acquisition Channel by Branch</p>
-      <canvas id="chartCmpChannel" style="max-height:300px;"></canvas>
+      <canvas id="chartCmpChannel" style="max-height:380px;"></canvas>
       <p id="cmpChannelInsight" class="cardnote" style="margin-top:12px; color:var(--ink-muted);"></p>
     </div>
 
-    <div class="card" style="margin-bottom:16px;">
-      <h3>Customer by Generation</h3>
-      <p class="cardnote">ลูกค้าแยกตาม Generation รายสาขา</p>
-      <canvas id="chartCmpGeneration" style="max-height:320px;"></canvas>
-      <div class="grid grid-4" id="cmpGenerationCards" style="margin-top:14px;"></div>
-      <p id="cmpGenerationInsight" class="cardnote" style="margin-top:12px; color:var(--ink-muted);"></p>
+    <div class="card">
+      <h3>ข้อเสนอแนะอื่นๆ แยกตามสาขา</h3>
+      <p class="cardnote">Other Suggestions by Branch — จัดกลุ่มคำตอบที่ซ้ำกัน ตัดคำตอบว่างเปล่าออกแล้ว</p>
+      <div class="grid grid-4" id="cmpFeedbackCards" style="margin-top:10px;"></div>
     </div>
   </section>
 
@@ -771,6 +791,31 @@ function genBucket(age){
 
 // Branches compared on the Branch Comparison page (Ratchaphruek excluded per request)
 const COMPARE_BRANCHES = BRANCH_ORDER.filter(b => b !== 'ราชพฤกษ์');
+
+// "ข้อเสนอแนะอื่นๆ" (open-text feedback) cleaning: drop non-answers, group identical
+// cleaned phrases together (many customers type the same short praise, e.g. "ดี", "อร่อย"),
+// so recurring themes surface instead of a long noisy list.
+const FEEDBACK_BLACKLIST = new Set([
+  '-','.','..','...','ไม่มี','ไม่มีค่ะ','ไม่มีครับ','ไม่มีคะ','ไม่มีนะคะ','ยังไม่มี',
+  'ไม่มีความคิดเห็น','ไม่มีค่ะขอบคุณค่ะ','no','none','na','n/a','nothing','-ค่ะ','-ครับ','ok','โอเค','x'
+]);
+function cleanFeedbackList(custArr){
+  const counter = {};
+  let respondents = 0;
+  custArr.forEach(c=>{
+    if(!c.ข้อเสนอแนะอื่นๆ) return;
+    const t = String(c.ข้อเสนอแนะอื่นๆ).trim();
+    if(!t) return;
+    respondents++;
+    const norm = t.toLowerCase().replace(/\s+/g,'');
+    if(FEEDBACK_BLACKLIST.has(norm)) return;
+    if(t.replace(/[.\-\s]/g,'').length < 1) return;
+    counter[t] = (counter[t]||0) + 1;
+  });
+  const list = Object.entries(counter).sort((a,b)=>b[1]-a[1]);
+  return { list, respondents, usefulCount: list.reduce((s,[,v])=>s+v,0) };
+}
+
 const AGE_ORDER = ['<18','15-19','20-24','25-29','30-34','35-39','40-44','45-49','50-54','55-59','60-64','65-69','70-74','75-79'];
 const SPEND_BINS = [
   {max:1, label:'0 (ยังไม่ซื้อ/ไม่บันทึก)'},
@@ -806,6 +851,7 @@ function parseRawData(custRows, usageRows){
       รู้จักร้านจากช่องทางไหน: r['รู้จักร้านจากช่องทางไหน '],
       สิ่งที่ประทับใจในร้าน: r['สิ่งที่ประทับใจในร้าน '],
       เดินทางมาร้านด้วยวิธีไหน: r['เดินทางมาร้านด้วยวิธีไหน '],
+      ข้อเสนอแนะอื่นๆ: r['ข้อเสนอแนะอื่นๆ'],
     };
   });
 
@@ -844,9 +890,23 @@ function parseRawData(custRows, usageRows){
   });
   const outliers = usageAll.filter(u => u.เพิ่มคะแนน > OUTLIER_THRESHOLD || u.ลดคะแนน > OUTLIER_THRESHOLD);
   const outlierNames = [...new Set(outliers.map(o=>o.ชื่อ))];
-  const usageClean = usageAll.filter(u => u.เพิ่มคะแนน <= OUTLIER_THRESHOLD && u.ลดคะแนน <= OUTLIER_THRESHOLD);
+  let usageClean = usageAll.filter(u => u.เพิ่มคะแนน <= OUTLIER_THRESHOLD && u.ลดคะแนน <= OUTLIER_THRESHOLD);
 
-  return { cust, usageClean, NOW, n_outliers_removed: outliers.length, outlier_names: outlierNames };
+  // Branch inference: most purchase transactions ("add-by-phone") have no branch recorded at
+  // source, but the customer's own registration record does. Map phone -> registered branch and
+  // use that as a best-effort stand-in when a transaction's own branch is missing. This is an
+  // approximation (the customer may have visited a different branch than where they registered).
+  const phoneToBranch = {};
+  cust.forEach(c=>{ if(c.phone && c.สาขา_clean) phoneToBranch[c.phone] = c.สาขา_clean; });
+  let inferredCount = 0;
+  usageClean = usageClean.map(u=>{
+    if(u.สาขา_clean) return { ...u, สาขา_inferred: u.สาขา_clean, สาขา_source: 'recorded' };
+    const inferred = u.phone ? phoneToBranch[u.phone] : null;
+    if(inferred) inferredCount++;
+    return { ...u, สาขา_inferred: inferred || null, สาขา_source: inferred ? 'inferred' : 'unknown' };
+  });
+
+  return { cust, usageClean, NOW, n_outliers_removed: outliers.length, outlier_names: outlierNames, n_branch_inferred: inferredCount };
 }
 
 // Recompute every aggregate from a (possibly filtered) subset of cleaned rows.
@@ -1124,6 +1184,8 @@ function computeAggregates(custF, usageF, NOW, outlierMeta){
   const khets = BKK_GEO.khets.map(k => ({ ...k, count: k.zone ? (residence_counts[k.zone] ?? null) : null }));
   const bkk_map = { viewBox: BKK_GEO.viewBox, khets, zone_totals, off_map };
 
+  const feedback = cleanFeedbackList(custF);
+
   return {
     kpi, branch_counts, tier_counts, gender_counts, age_counts, recency_counts,
     reg_trend, spend_bin_counts, top_spenders, newsletter_counts,
@@ -1132,6 +1194,7 @@ function computeAggregates(custF, usageF, NOW, outlierMeta){
     residence_counts: sortObjDesc(residence_counts), residence_n,
     txn_type_counts, pts_trend, sales_trend, promo_top,
     new_vs_returning, visit_by_dow, visit_by_daypart, rfm_segments, customer_journey, area_split,
+    feedback,
     branch_order: BRANCH_ORDER, bkk_map,
   };
 }
@@ -1161,7 +1224,8 @@ function computeBranchComparison(RAW, mFrom, mTo){
     const genPct = {};
     GEN_ORDER.forEach(g => genPct[g] = genTotal ? Math.round((genRaw[g]||0)/genTotal*1000)/10 : 0);
 
-    perBranch[b] = { n, residence, travel, impression, channel, genPct, genTotal };
+    const feedback = cleanFeedbackList(custB);
+    perBranch[b] = { n, residence, travel, impression, channel, genPct, genTotal, feedback };
   });
 
   // top N category labels across all compared branches (by combined respondent count), for consistent chart axes
@@ -1423,7 +1487,7 @@ function updateAll(){
   );
   const usageF = RAW.usageClean.filter(u =>
     u.month && u.month >= mFrom && u.month <= mTo &&
-    (allBranchesSelected || (u.สาขา_clean && selectedBranches.has(u.สาขา_clean)))
+    (allBranchesSelected || (u.สาขา_inferred && selectedBranches.has(u.สาขา_inferred)))
   );
 
   document.getElementById('branchDataWarning').style.display = allBranchesSelected ? 'none' : 'block';
@@ -1507,15 +1571,6 @@ function updateAll(){
     options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, layout:{padding:{right:70}},
       plugins:{legend:{display:false}, valueLabels:{mode:'share'}},
       scales:{ x:{grid:{color:COLORS.grid}}, y:{grid:{display:false}} } }
-  });
-
-  // --- Branch donut ---
-  const branchLabels = Object.keys(DATA.branch_counts);
-  makeOrUpdate('chartBranch', {
-    type:'doughnut',
-    data:{ labels:branchLabels, datasets:[{ data:branchLabels.map(b=>DATA.branch_counts[b]),
-      backgroundColor: branchLabels.map((b,i)=>PALETTE[i%PALETTE.length]) }] },
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:legendBottom, valueLabels:{mode:'share'} }, cutout:'62%' }
   });
 
   // --- Tier ---
@@ -1646,9 +1701,18 @@ function updateAll(){
     <li>เขตที่พักอาศัยที่เป็นข้อความอิสระถูกจัดรวมเป็น "พื้นที่อื่นๆ (ระบุเอง)" แยกจาก 11 โซนหลัก</li>
     <li>ช่วงอายุที่ผิดพลาดจากข้อมูลต้นทาง (เช่น "115-119" ปี) ถูกคัดออกจากกราฟช่วงอายุ</li>
     <li>สถานะ "recency" คำนวณจากวันที่ใช้งานล่าสุดเทียบกับวันที่ล่าสุดที่พบในข้อมูลทั้งหมด (${DATA.kpi.data_snapshot_date}) — ค่านี้คงที่ ไม่เปลี่ยนตามฟิลเตอร์เดือน</li>
-    <li>การกรองสาขาสำหรับยอดขาย/แต้ม จะนับเฉพาะธุรกรรมที่มีการบันทึกสาขาไว้ (ธุรกรรมประเภท "แลกแต้มด้วยเบอร์โทร" ส่วนใหญ่ไม่มีสาขากำกับ จึงถูกนับเฉพาะเมื่อเลือก "ทั้งหมด")</li>
+    <li>ธุรกรรมซื้อส่วนใหญ่ไม่มีสาขากำกับโดยตรงในไฟล์ต้นทาง จึงแมพผ่านเบอร์โทรกับสาขาที่ลูกค้าคนนั้นสมัครสมาชิกไว้แทน (ครอบคลุมได้ ~97% ของธุรกรรมซื้อ) เมื่อกรองรายสาขา ตัวเลขยอดขาย/พฤติกรรมการซื้อจึงเป็นค่าประมาณอิงสาขาที่สมัคร ไม่ใช่สาขาที่ไปซื้อจริงเป๊ะ 100%</li>
+    <li>ข้อเสนอแนะอื่นๆ ตัดคำตอบว่างเปล่า/ไม่มีความเห็น (เช่น "-", "ไม่มี", ".") ออกก่อนแสดงผล และจัดกลุ่มข้อความที่ตรงกันทุกตัวอักษรเข้าด้วยกัน</li>
     <li>แผนที่ทำเลที่พักอาศัยอ้างอิงขอบเขตเขตการปกครองของกรุงเทพมหานคร (50 เขต) จาก OpenGISData-Thailand โซนที่รวมหลายเขตจะถูกไล่สีเท่ากันทุกเขตในกลุ่มนั้น</li>
   `;
+
+  // --- Feedback table (Section 1) ---
+  const fbTbody = document.querySelector('#feedbackTable tbody');
+  fbTbody.innerHTML = DATA.feedback.list.slice(0,40).map(([text,count],i)=>`
+    <tr><td><span class="rank">${i+1}</span></td><td>${text}</td><td class="num">${count}</td></tr>`).join('')
+    || '<tr><td colspan="3" style="color:var(--ink-faint);">ไม่มีข้อเสนอแนะในตัวกรองนี้</td></tr>';
+  document.getElementById('feedbackNote').textContent =
+    `Other Suggestions / Open Feedback — จากผู้ตอบ ${fmtNum(DATA.feedback.respondents)} คน (${fmtNum(DATA.feedback.usefulCount)} คำตอบที่มีเนื้อหา) จัดกลุ่มคำตอบที่ซ้ำกัน เรียงจากพบบ่อยที่สุด (ตัดคำตอบว่างเปล่า เช่น "-", "ไม่มี" ออกแล้ว)`;
 
   renderBkkMap();
   renderBranchComparison(mFrom, mTo);
@@ -1737,7 +1801,23 @@ function renderBranchComparison(mFrom, mTo){
   const cb = CMP.branches;
   const branchColor = b => PALETTE[BRANCH_ORDER.indexOf(b) % PALETTE.length];
 
-  function groupedBar(id, categories, getPct, horizontal){
+  // Branch distribution donut: always all branches (incl. ราชพฤกษ์), filtered by month only —
+  // intentionally independent of the main branch filter, consistent with the rest of this page.
+  try{
+    const custMonthOnly = RAW.cust.filter(c => c.reg_month && c.reg_month>=mFrom && c.reg_month<=mTo);
+    const branchCountsAll = {};
+    custMonthOnly.forEach(c => { const b = c.สาขา_clean || 'ไม่ระบุ'; branchCountsAll[b] = (branchCountsAll[b]||0)+1; });
+    const branchLabelsAll = Object.keys(branchCountsAll);
+    makeOrUpdate('chartBranch', {
+      type:'doughnut',
+      data:{ labels:branchLabelsAll, datasets:[{ data:branchLabelsAll.map(b=>branchCountsAll[b]),
+        backgroundColor: branchLabelsAll.map((b,i)=>PALETTE[i%PALETTE.length]) }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:legendBottom, valueLabels:{mode:'share'} }, cutout:'62%' }
+    });
+  } catch(err){ console.error('chartBranch (page4) render failed:', err); }
+
+  function groupedBar(id, categories, getPct, horizontal, displayLabels){
+    const labels = displayLabels || categories;
     const datasets = cb.map(b=>({
       label:b,
       data: categories.map(cat => getPct(b, cat)),
@@ -1747,19 +1827,36 @@ function renderBranchComparison(mFrom, mTo){
     try{
       makeOrUpdate(id, {
         type:'bar',
-        data:{ labels:categories, datasets },
+        data:{ labels, datasets },
         options:{ indexAxis: horizontal?'y':'x', responsive:true, maintainAspectRatio:false,
+          layout:{ padding:{ right: horizontal?10:0 } },
           plugins:{ legend:legendBottom, tooltip:{ callbacks:{ label:(ctx)=>`${ctx.dataset.label}: ${ctx.parsed[horizontal?'x':'y']}%` } } },
           scales: horizontal
-            ? { x:{ grid:{color:COLORS.grid}, ticks:{callback:v=>v+'%'} }, y:{ grid:{display:false}, ticks:{font:{size:10.5}} } }
-            : { x:{ grid:{display:false} }, y:{ grid:{color:COLORS.grid}, ticks:{callback:v=>v+'%'} } }
+            ? { x:{ grid:{color:COLORS.grid}, ticks:{callback:v=>v+'%'} },
+                y:{ grid:{display:false}, ticks:{font:{size:11}, autoSkip:false} } }
+            : { x:{ grid:{display:false}, ticks:{font:{size:10.5}} }, y:{ grid:{color:COLORS.grid}, ticks:{callback:v=>v+'%'} } }
         }
       });
     } catch(err){ console.error(id+' render failed:', err); }
   }
+  const ZONE_SHORT = {
+    'บางนา สวนหลวง ลาดกระบัง':'บางนา/สวนหลวง',
+    'ปทุมวัน บางรัก ราชเทวี':'ปทุมวัน/บางรัก',
+    'ปริมณฑล':'ปริมณฑล',
+    'วัฒนา คลองเตย พระโขนง':'วัฒนา/คลองเตย',
+    'รัชดา ลาดพร้าว ห้วยขวาง':'รัชดา/ลาดพร้าว',
+    'ธนบุรี คลองสาน บางกอกน้อย บางกอกใหญ่ บางพลัด':'ธนบุรีฝั่งตะวันตก',
+    'จตุจักร บางเขน พหลโยธิน':'จตุจักร/บางเขน',
+    'ต่างจังหวัด':'ต่างจังหวัด',
+    'มีนบุรี บางกะปิ รามคำแหง':'มีนบุรี/บางกะปิ',
+    'บางแค หนองแขม ภาษีเจริญ':'บางแค/หนองแขม',
+    'ดอนเมือง สายไหม สะพานสูง':'ดอนเมือง/สายไหม',
+    'พื้นที่อื่นๆ (ระบุเอง)':'อื่นๆ',
+  };
 
   // --- Residence ---
-  groupedBar('chartCmpResidence', CMP.residenceLabels, (b,cat)=>CMP.perBranch[b].residence.pct[cat]||0, true);
+  groupedBar('chartCmpResidence', CMP.residenceLabels, (b,cat)=>CMP.perBranch[b].residence.pct[cat]||0, true,
+    CMP.residenceLabels.map(z => ZONE_SHORT[z] || z));
   document.getElementById('cmpResidenceCards').innerHTML = cb.map(b=>{
     const p = CMP.perBranch[b];
     const top = Object.entries(p.residence.pct).sort((a,b2)=>b2[1]-a[1])[0];
@@ -1832,6 +1929,19 @@ function renderBranchComparison(mFrom, mTo){
     document.getElementById('cmpGenerationInsight').innerHTML = genZRank.length
       ? `ทุกสาขามีฐานลูกค้ากลุ่ม Gen Y (30-45) เป็นหลัก — สาขาที่มีสัดส่วน Gen Z สูงสุดคือ <b>${genZRank[0][0]}</b> (${genZRank[0][1]}%)` : '';
   }
+
+  // --- Feedback by branch ---
+  document.getElementById('cmpFeedbackCards').innerHTML = cb.map(b=>{
+    const fb = CMP.perBranch[b].feedback;
+    const rows = fb.list.slice(0,8).map(([text,count])=>`
+      <div class="brow" style="align-items:flex-start;"><span style="flex:1; padding-right:8px;">${text}</span><b style="white-space:nowrap;">${count}</b></div>`).join('')
+      || `<div class="brow"><span style="color:var(--ink-faint);">ไม่มีข้อเสนอแนะ</span></div>`;
+    return `<div class="branch-stat-card">
+      <div class="bname" style="color:${branchColor(b)}">${b}</div>
+      <div style="font-size:10.5px; color:var(--ink-faint); margin-bottom:8px;">จากผู้ตอบ ${fmtNum(fb.respondents)} คน</div>
+      ${rows}
+    </div>`;
+  }).join('');
 }
 
 // ===================== INIT / LIVE REFRESH =====================
